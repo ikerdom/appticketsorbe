@@ -19,6 +19,11 @@ export function normalizeLoginEmail(rawEmail: string) {
     return `${local}@orbe.es`;
   }
 
+  // Compatibilidad de dominio histórico de Entenova para login
+  if (domain === "entenova-gnosis.com") {
+    return `${local}@entenova.gnosis.com`;
+  }
+
   return email;
 }
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { DndContext, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Estado, Prioridad } from "@prisma/client";
-import { Search } from "lucide-react";
+import { ChevronDown, ChevronUp, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { SortableTicketCard } from "@/components/kanban/sortable-ticket-card";
 import { ESTADO_LABELS } from "@/lib/constants";
+import { formatDateTimeEs } from "@/lib/dates";
 import type { TicketCardData } from "@/types/ticket";
 
 interface KanbanBoardProps {
@@ -28,6 +29,7 @@ const COLUMN_BAR: Record<Estado, string> = {
   EN_CURSO: "bg-amber-500",
   RESUELTO: "bg-emerald-500"
 };
+const HISTORICO_DIAS = 3;
 
 function Column({ id, title, children, count }: { id: Estado; title: string; children: React.ReactNode; count: number }) {
   const { setNodeRef } = useDroppable({ id });
@@ -43,7 +45,7 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
         <div className={`h-1.5 rounded-full ${COLUMN_BAR[id]}`} />
       </div>
 
-      <div ref={setNodeRef} className="min-h-[320px] space-y-3 rounded-2xl border bg-muted/20 p-3">
+      <div ref={setNodeRef} className="min-h-[220px] space-y-2 rounded-2xl border bg-muted/20 p-2.5">
         {count === 0 ? (
           <div className="rounded-xl border border-dashed bg-background/80 p-4 text-center text-sm text-muted-foreground">
             Nada por aquí.
@@ -58,6 +60,7 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
 export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }: KanbanBoardProps) {
   const [tickets, setTickets] = useState<TicketCardData[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
+  const [showHistorico, setShowHistorico] = useState(false);
   const [isPending, startTransition] = useTransition();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -87,21 +90,26 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin]);
 
+  const historicoResueltas = useMemo(() => {
+    const cutoff = Date.now() - HISTORICO_DIAS * 24 * 60 * 60 * 1000;
+    return tickets
+      .filter((t) => t.estado === "RESUELTO" && new Date(t.resueltoAt ?? t.updatedAt).getTime() < cutoff)
+      .sort((a, b) => new Date(b.resueltoAt ?? b.updatedAt).getTime() - new Date(a.resueltoAt ?? a.updatedAt).getTime());
+  }, [tickets]);
+
+  const visibleTickets = useMemo(() => {
+    const hiddenIds = new Set(historicoResueltas.map((t) => t.id));
+    return tickets.filter((t) => !hiddenIds.has(t.id));
+  }, [tickets, historicoResueltas]);
+
   const grouped = useMemo(
     () => ({
-      ABIERTO: tickets.filter((t) => t.estado === "ABIERTO"),
-      EN_CURSO: tickets.filter((t) => t.estado === "EN_CURSO"),
-      RESUELTO: tickets.filter((t) => t.estado === "RESUELTO")
+      ABIERTO: visibleTickets.filter((t) => t.estado === "ABIERTO"),
+      EN_CURSO: visibleTickets.filter((t) => t.estado === "EN_CURSO"),
+      RESUELTO: visibleTickets.filter((t) => t.estado === "RESUELTO")
     }),
-    [tickets]
+    [visibleTickets]
   );
-
-  const byDestino = useMemo(() => {
-    return empresas.map((empresa) => {
-      const list = tickets.filter((ticket) => ticket.destinos.some((destino) => destino.empresaId === empresa.id));
-      return { empresa, list };
-    });
-  }, [empresas, tickets]);
 
   async function refreshWithFilters(nextFilters = filters) {
     const params = new URLSearchParams();
@@ -210,7 +218,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
                 Solo mi empresa
               </button>
             </div>
-            <p className="text-sm font-medium">Mostrando {tickets.length} incidencias</p>
+            <p className="text-sm font-medium">Mostrando {visibleTickets.length} incidencias</p>
           </div>
         ) : null}
 
@@ -268,35 +276,52 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
         {isPending && <p className="mt-3 text-xs text-muted-foreground">Actualizando filtros...</p>}
       </Card>
 
-      <Card className="rounded-2xl p-4">
-        <h3 className="mb-3 text-sm font-semibold">Incidencias por empresa afectada</h3>
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-          {byDestino.map(({ empresa, list }) => (
-            <div key={empresa.id} className="rounded-xl border p-3">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-semibold">{empresa.nombre}</span>
-                <span className="text-xs text-muted-foreground">{list.length}</span>
-              </div>
-              {list.length === 0 ? <p className="text-xs text-muted-foreground">Ninguna</p> : null}
-              <div className="space-y-1">
-                {list.slice(0, 3).map((ticket) => (
-                  <Link key={ticket.id} href={`/tickets/${ticket.id}`} className="block truncate text-xs text-slate-700 hover:underline">
-                    #{String(ticket.numero).padStart(3, "0")} · {ticket.titulo}
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      {tickets.length === 0 ? (
+      {visibleTickets.length === 0 ? (
         <div className="rounded-2xl border border-dashed bg-card p-8 text-center">
           <p className="mb-3 text-sm text-muted-foreground">No hay incidencias con los filtros actuales.</p>
           <Link href="/tickets/nuevo" className="inline-flex rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
             Crear incidencia
           </Link>
         </div>
+      ) : null}
+
+      {historicoResueltas.length > 0 ? (
+        <Card className="rounded-2xl p-3">
+          <button
+            type="button"
+            onClick={() => setShowHistorico((prev) => !prev)}
+            className="flex w-full items-center justify-between text-left text-sm font-semibold"
+          >
+            <span>Histórico de resueltas ({historicoResueltas.length})</span>
+            {showHistorico ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+
+          {showHistorico ? (
+            <div className="mt-3 space-y-2">
+              {historicoResueltas.map((ticket) => {
+                const empresa = ticket.destinos.find((d) => !d.empresa.isGlobalTarget)?.empresa ?? ticket.empresaDestino;
+                const autor = ticket.creador.nombre || ticket.creador.name || ticket.creador.email;
+                return (
+                  <Link key={ticket.id} href={`/tickets/${ticket.id}`} className="block rounded-xl border p-3 hover:bg-muted/30">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="inline-flex rounded px-2 py-0.5 text-[11px] font-semibold text-white" style={{ backgroundColor: empresa.color || "#64748b" }}>
+                        {empresa.nombre}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Resuelta: {formatDateTimeEs(ticket.resueltoAt ?? ticket.updatedAt)}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold">
+                      #{String(ticket.numero).padStart(3, "0")} · {ticket.titulo}
+                    </p>
+                    <p className="line-clamp-1 text-xs text-muted-foreground">{ticket.descripcion}</p>
+                    <p className="text-xs text-muted-foreground">Creada por: {autor}</p>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : null}
+        </Card>
       ) : null}
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
