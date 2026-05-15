@@ -2,7 +2,8 @@
 import bcrypt from "bcryptjs";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { APP_ROLE_COOKIE, APP_SESSION_COOKIE, cookieCommonOptions, createSessionForUser } from "@/lib/auth-session";
-import { isEmailFormat, normalizeLoginEmail } from "@/lib/auth-email";
+import { isAllowedEmail, isEmailFormat, normalizeLoginEmail } from "@/lib/auth-email";
+import { resolveActiveDomain } from "@/lib/company-config";
 import { prisma } from "@/lib/prisma";
 
 function getClientIp(request: NextRequest) {
@@ -30,14 +31,40 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: "Demasiados intentos. Prueba en un minuto." }, { status: 429 });
     }
 
-    const user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: { email },
       select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
     });
 
     if (!user) {
-      console.warn(`[login] no autorizado: ${email}`);
-      return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
+      if (!isAllowedEmail(email)) {
+        console.warn(`[login] no autorizado: ${email}`);
+        return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
+      }
+
+      const [, rawDomain = ""] = email.split("@");
+      const domain = resolveActiveDomain(rawDomain);
+      const empresa = await prisma.empresa.findFirst({
+        where: { dominio: domain, isActive: true, isGlobalTarget: false, deletedAt: null },
+        select: { id: true }
+      });
+
+      if (!empresa) {
+        console.error(`[login] empresa no encontrada para dominio: ${domain}`);
+        return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
+      }
+
+      user = await prisma.user.create({
+        data: {
+          email,
+          rol: "USER",
+          empresaId: empresa.id,
+          activo: true,
+          passwordHash: null,
+          mustChangePassword: false
+        },
+        select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
+      });
     }
 
     if (!user.activo) {
