@@ -1,0 +1,73 @@
+﻿import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { APP_ROLE_COOKIE, APP_SESSION_COOKIE, cookieCommonOptions, createSessionForUser } from "@/lib/auth-session";
+import { isEmailFormat, normalizeLoginEmail } from "@/lib/auth-email";
+import { prisma } from "@/lib/prisma";
+
+function getClientIp(request: NextRequest) {
+  const xForwardedFor = request.headers.get("x-forwarded-for");
+  if (xForwardedFor) return xForwardedFor.split(",")[0]?.trim() ?? "unknown";
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json().catch(() => ({}));
+    const emailRaw = String(body.email ?? "");
+    const password = typeof body.password === "string" ? body.password : "";
+
+    const email = normalizeLoginEmail(emailRaw);
+    console.log(`[login] request: ${email || "<empty>"}`);
+
+    if (!email || !isEmailFormat(email)) {
+      return NextResponse.json({ ok: false, message: "Datos de acceso no validos." }, { status: 400 });
+    }
+
+    const ip = getClientIp(request);
+    const limit = checkRateLimit(`login-ip:${ip}`, 10, 60_000);
+    if (!limit.allowed) {
+      return NextResponse.json({ ok: false, message: "Demasiados intentos. Prueba en un minuto." }, { status: 429 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
+    });
+
+    if (!user) {
+      console.warn(`[login] no autorizado: ${email}`);
+      return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
+    }
+
+    if (!user.activo) {
+      return NextResponse.json({ ok: false, message: "Usuario desactivado" }, { status: 423 });
+    }
+
+    if (user.rol === "ADMIN") {
+      if (!password || !user.passwordHash) {
+        return NextResponse.json({ ok: false, message: "Credenciales incorrectas" }, { status: 401 });
+      }
+      const valid = await bcrypt.compare(password, user.passwordHash);
+      if (!valid) {
+        return NextResponse.json({ ok: false, message: "Credenciales incorrectas" }, { status: 401 });
+      }
+    }
+
+    const session = await createSessionForUser({ id: user.id, rol: user.rol });
+
+    const response = NextResponse.json({
+      ok: true,
+      role: user.rol,
+      redirect: user.rol === "ADMIN" ? "/admin/dashboard" : "/"
+    });
+
+    response.cookies.set(APP_SESSION_COOKIE, session.token, cookieCommonOptions(session.expires));
+    response.cookies.set(APP_ROLE_COOKIE, user.rol, { ...cookieCommonOptions(session.expires), httpOnly: false });
+
+    return response;
+  } catch (error) {
+    console.error("[login] internal error", error);
+    return NextResponse.json({ ok: false, message: "Error interno al iniciar sesion." }, { status: 500 });
+  }
+}

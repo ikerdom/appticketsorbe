@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id               String   @id @default(cuid())
+  nombre           String   @unique
+  dominio          String   @unique
+  color            String?
+  logoUrl          String?
+  descripcionCorta String?
+  isActive         Boolean  @default(true)
+  isLegacy         Boolean  @default(false)
+  isGlobalTarget   Boolean  @default(false)
+  deletedAt        DateTime?
+  createdAt        DateTime @default(now())
+  usuarios         User[]
+  ticketsOrigen    Ticket[] @relation("EmpresaOrigen")
+  ticketsDestino   Ticket[] @relation("EmpresaDestino")
+  ticketsNn        TicketEmpresaDestino[]
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  name            String?
+  nombre          String?
+  passwordHash    String?
+  mustChangePassword Boolean @default(false)
+  rol             Rol      @default(USER)
+  activo          Boolean  @default(true)
+  empresaId       String
+  empresa         Empresa  @relation(fields: [empresaId], references: [id])
+  ticketsCreados  Ticket[] @relation("Creador")
+  ticketsAsignados Ticket[] @relation("Asignado")
+  comentarios     Comentario[]
+  createdAt       DateTime @default(now())
+  lastSeenAt      DateTime?
+  bienvenidaVista Boolean  @default(false)
+  emailVerified   DateTime?
+  image           String?
+  accounts        Account[]
+  sessions        Session[]
+  historial       HistorialTicket[]
+  lecturas        LecturaTicket[]
+  notifications   Notification[]
+  presencias      TicketPresencia[]
+  ediciones       TicketEdicion[]
+}
+
+enum Rol {
+  USER
+  ADMIN
+}
+
+model Ticket {
+  id                String   @id @default(cuid())
+  numero            Int      @unique @default(autoincrement())
+  titulo            String
+  descripcion       String   @db.Text
+  estado            Estado   @default(ABIERTO)
+  prioridad         Prioridad @default(MEDIA)
+  categoria         Categoria @default(OTROS)
+  categoriaCustom   String?
+  empresaOrigenId   String
+  empresaOrigen     Empresa  @relation("EmpresaOrigen", fields: [empresaOrigenId], references: [id])
+  empresaDestinoId  String
+  empresaDestino    Empresa  @relation("EmpresaDestino", fields: [empresaDestinoId], references: [id])
+  destinos          TicketEmpresaDestino[]
+  creadorId         String
+  creador           User     @relation("Creador", fields: [creadorId], references: [id])
+  asignadoId        String?
+  asignado          User?    @relation("Asignado", fields: [asignadoId], references: [id])
+  personaAfectada   String?
+  contactoNombre    String?
+  contactoTelefono  String?
+  contactoEmail     String?
+  contactoReferencia String?
+  contactoNotas     String? @db.Text
+  archivadoAt       DateTime?
+  comentarios       Comentario[]
+  adjuntos          Adjunto[]
+  historial         HistorialTicket[]
+  lecturas          LecturaTicket[]
+  presencias        TicketPresencia[]
+  edicion           TicketEdicion?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  resueltoAt        DateTime?
+
+  @@index([empresaOrigenId])
+  @@index([empresaDestinoId])
+  @@index([estado])
+}
+
+model TicketEmpresaDestino {
+  id        String   @id @default(cuid())
+  ticketId   String
+  empresaId  String
+  ticket     Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  empresa    Empresa @relation(fields: [empresaId], references: [id], onDelete: Restrict)
+  createdAt  DateTime @default(now())
+
+  @@unique([ticketId, empresaId])
+  @@index([empresaId])
+}
+
+model TicketCategoriaCustom {
+  id        String   @id @default(cuid())
+  nombre    String   @unique
+  createdAt DateTime @default(now())
+}
+
+model HistorialTicket {
+  id        String   @id @default(cuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  autorId   String?
+  autor     User?    @relation(fields: [autorId], references: [id])
+  accion    String
+  detalle   Json?
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+  @@index([createdAt])
+}
+
+model LecturaTicket {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuarioId   String
+  usuario     User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  ultimaVisita DateTime @default(now())
+
+  @@unique([ticketId, usuarioId])
+  @@index([usuarioId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  usuarioId String
+  usuario   User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tipo      String
+  ticketId  String?
+  mensaje   String
+  leida     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId, leida, createdAt])
+  @@map("Notificacion")
+}
+
+model TicketPresencia {
+  id         String   @id @default(cuid())
+  ticketId   String
+  ticket     Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuarioId  String
+  usuario    User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  lastSeenAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+
+  @@unique([ticketId, usuarioId])
+  @@index([ticketId, lastSeenAt])
+}
+
+model TicketEdicion {
+  id        String   @id @default(cuid())
+  ticketId  String   @unique
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  usuarioId String
+  usuario   User     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([usuarioId])
+}
+
+enum Estado {
+  ABIERTO
+  EN_CURSO
+  RESUELTO
+}
+
+enum Prioridad {
+  BAJA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum Categoria {
+  TECNICO
+  ADMINISTRATIVO
+  COMERCIAL
+  RRHH
+  OTROS
+}
+
+model Comentario {
+  id        String   @id @default(cuid())
+  contenido String   @db.Text
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  autorId   String
+  autor     User     @relation(fields: [autorId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Adjunto {
+  id        String   @id @default(cuid())
+  nombre    String
+  url       String
+  tipo      String
+  tamano    Int
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
