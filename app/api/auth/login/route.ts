@@ -16,6 +16,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
     const emailRaw = String(body.email ?? "");
+    const emailInput = emailRaw.trim().toLowerCase();
     const password = typeof body.password === "string" ? body.password : "";
 
     const email = normalizeLoginEmail(emailRaw);
@@ -37,7 +38,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      if (!isAllowedEmail(email)) {
+      const allowedByRaw = isAllowedEmail(emailInput);
+      const allowedByNormalized = isAllowedEmail(email);
+      if (!allowedByRaw && !allowedByNormalized) {
         console.warn(`[login] no autorizado: ${email}`);
         return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
       }
