@@ -9,7 +9,7 @@ export async function POST() {
     }
 
     return NextResponse.json(
-      { ok: false, message: "La contrasena de administradores es global y se resetea desde Admin > Usuarios." },
+      { ok: false, message: "La contraseña de administradores es global y se restablece desde Admin > Usuarios." },
       { status: 400 }
     );
   } catch {

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     console.log(`[login] request: ${email || "<empty>"}`);
 
     if (!email || !isEmailFormat(email)) {
-      return NextResponse.json({ ok: false, message: "Datos de acceso no validos." }, { status: 400 });
+      return NextResponse.json({ ok: false, message: "Datos de acceso no válidos." }, { status: 400 });
     }
 
     const ip = getClientIp(request);
@@ -98,6 +98,6 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error("[login] internal error", error);
-    return NextResponse.json({ ok: false, message: "Error interno al iniciar sesion." }, { status: 500 });
+    return NextResponse.json({ ok: false, message: "Error interno al iniciar sesión." }, { status: 500 });
   }
 }

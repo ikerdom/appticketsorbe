@@ -9,7 +9,7 @@ export async function PATCH() {
     }
 
     return NextResponse.json(
-      { error: "La contrasena de administradores es global y se gestiona desde Admin > Usuarios." },
+      { error: "La contraseña de administradores es global y se gestiona desde Admin > Usuarios." },
       { status: 400 }
     );
   } catch {

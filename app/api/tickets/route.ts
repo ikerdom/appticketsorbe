@@ -12,7 +12,15 @@ export async function GET(request: NextRequest) {
     const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
     const filters = filtroSchema.parse(searchParams);
 
-    const andFilters: Prisma.TicketWhereInput[] = [visibleTicketWhere(user), { archivadoAt: null }];
+    const userReadOnlyOtherCompany =
+      user.rol !== "ADMIN" &&
+      Boolean(filters.empresaDestinoId) &&
+      filters.empresaDestinoId !== user.empresaId;
+
+    const andFilters: Prisma.TicketWhereInput[] = [
+      userReadOnlyOtherCompany ? { archivadoAt: null } : visibleTicketWhere(user),
+      { archivadoAt: null }
+    ];
     if (filters.empresaOrigenId) andFilters.push({ empresaOrigenId: filters.empresaOrigenId });
     if (filters.empresaDestinoId) andFilters.push({ destinos: { some: { empresaId: filters.empresaDestinoId } } });
     if (filters.prioridad) andFilters.push({ prioridad: filters.prioridad });

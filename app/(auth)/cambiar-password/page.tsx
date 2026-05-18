@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -38,11 +38,11 @@ export default function CambiarPasswordPage() {
       return;
     }
     if (!isStrongPassword(nueva)) {
-      setError("La nueva contrasena debe tener minimo 8 caracteres, una mayuscula y un numero.");
+      setError("La nueva contraseña debe tener mínimo 8 caracteres, una mayúscula y un número.");
       return;
     }
     if (nueva !== confirmar) {
-      setError("La confirmacion no coincide con la nueva contrasena.");
+      setError("La confirmación no coincide con la nueva contraseña.");
       return;
     }
 
@@ -55,7 +55,7 @@ export default function CambiarPasswordPage() {
       });
       const payload = await response.json().catch(() => ({ ok: false, message: "Error interno." }));
       if (!response.ok || !payload.ok) {
-        setError(payload.message ?? "No se pudo cambiar la contrasena.");
+        setError(payload.message ?? "No se pudo cambiar la contraseña.");
         return;
       }
       router.push(nextPath || "/");
@@ -71,21 +71,21 @@ export default function CambiarPasswordPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
       <Card className="w-full max-w-md rounded-2xl border shadow-sm">
         <CardHeader>
-          <CardTitle className="text-2xl font-semibold tracking-tight">Cambiar contrasena</CardTitle>
-          <CardDescription>Debes actualizar tu contrasena para continuar.</CardDescription>
+          <CardTitle className="text-2xl font-semibold tracking-tight">Cambiar contraseña</CardTitle>
+          <CardDescription>Debes actualizar tu contraseña para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
-              <Label htmlFor="actual">Contrasena actual</Label>
+              <Label htmlFor="actual">Contraseña actual</Label>
               <Input id="actual" type="password" value={actual} onChange={(event) => setActual(event.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="nueva">Nueva contrasena</Label>
+              <Label htmlFor="nueva">Nueva contraseña</Label>
               <Input id="nueva" type="password" value={nueva} onChange={(event) => setNueva(event.target.value)} required />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="confirmar">Repetir nueva contrasena</Label>
+              <Label htmlFor="confirmar">Repetir nueva contraseña</Label>
               <Input id="confirmar" type="password" value={confirmar} onChange={(event) => setConfirmar(event.target.value)} required />
             </div>
 
@@ -98,7 +98,7 @@ export default function CambiarPasswordPage() {
                   Guardando...
                 </>
               ) : (
-                "Guardar contrasena"
+                "Guardar contraseña"
               )}
             </Button>
           </form>

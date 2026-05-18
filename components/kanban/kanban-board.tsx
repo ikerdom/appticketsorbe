@@ -5,7 +5,7 @@ import Link from "next/link";
 import { DndContext, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Estado, Prioridad } from "@prisma/client";
-import { ChevronDown, ChevronUp, Search } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,6 +22,7 @@ interface KanbanBoardProps {
   usuarios: { id: string; email: string; nombre: string | null; name: string | null; empresaId: string; image: string | null }[];
   isAdmin: boolean;
   currentUserId: string;
+  currentUserEmpresaId: string;
 }
 
 const COLUMN_BAR: Record<Estado, string> = {
@@ -57,7 +58,9 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
   );
 }
 
-export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }: KanbanBoardProps) {
+const CATEGORY_OPTIONS = ["Emails", "Seguridad", "Técnico", "Máquina", "Impresora", "Pedidos", "Presupuestos", "Otros"];
+
+export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, currentUserEmpresaId }: KanbanBoardProps) {
   const [tickets, setTickets] = useState<TicketCardData[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
@@ -65,30 +68,15 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const [filters, setFilters] = useState({
-    q: "",
-    empresaDestinoId: "",
+    empresaDestinoId: isAdmin ? "" : currentUserEmpresaId,
     prioridad: "",
-    categoria: "",
-    vistaEmpresa: isAdmin ? "all" : "mine"
+    categoria: ""
   });
 
   const hasActiveFilters = useMemo(
-    () =>
-      Boolean(filters.q || filters.empresaDestinoId || filters.prioridad || filters.categoria || (isAdmin && filters.vistaEmpresa !== "all")),
-    [filters, isAdmin]
+    () => Boolean(filters.empresaDestinoId || filters.prioridad || filters.categoria),
+    [filters]
   );
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    const persisted = window.localStorage.getItem("kanban-vista-empresa");
-    if (persisted === "all" || persisted === "mine") {
-      setFilters((prev) => ({ ...prev, vistaEmpresa: persisted }));
-      void refreshWithFilters({ ...filters, vistaEmpresa: persisted });
-      return;
-    }
-    window.localStorage.setItem("kanban-vista-empresa", "all");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin]);
 
   const historicoResueltas = useMemo(() => {
     const cutoff = Date.now() - HISTORICO_DIAS * 24 * 60 * 60 * 1000;
@@ -152,6 +140,11 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
     }
 
     const canTakeByDrag = fromTicket.estado === "ABIERTO" && !fromTicket.asignadoId && targetEstado === "EN_CURSO";
+    const canEditTicket = isAdmin || fromTicket.empresaOrigenId === currentUserEmpresaId || fromTicket.destinos.some((d) => d.empresaId === currentUserEmpresaId);
+    if (!canEditTicket) {
+      toast.error("Solo lectura: no puedes mover incidencias de otra empresa.");
+      return;
+    }
     if (!isAdmin && fromTicket.asignadoId && fromTicket.asignadoId !== currentUserId && !canTakeByDrag) {
       toast.error("Solo quien la está gestionando puede mover esta incidencia.");
       return;
@@ -196,40 +189,13 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
   return (
     <div className="space-y-4">
       <Card className="rounded-2xl p-4 shadow-sm">
-        {isAdmin ? (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3">
-            <div className="inline-flex rounded-lg border bg-background p-1">
-              <button
-                type="button"
-                onClick={() => updateFilter("vistaEmpresa", "all")}
-                className={`rounded-md px-4 py-2 text-sm font-semibold ${
-                  filters.vistaEmpresa === "all" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                }`}
-              >
-                Todas las empresas
-              </button>
-              <button
-                type="button"
-                onClick={() => updateFilter("vistaEmpresa", "mine")}
-                className={`rounded-md px-4 py-2 text-sm font-semibold ${
-                  filters.vistaEmpresa === "mine" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                }`}
-              >
-                Solo mi empresa
-              </button>
-            </div>
-            <p className="text-sm font-medium">Mostrando {visibleTickets.length} incidencias</p>
-          </div>
-        ) : null}
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-sm font-medium">Mostrando {visibleTickets.length} incidencias</p>
+        </div>
 
-        <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-5">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input className="pl-9" placeholder="Buscar incidencia" value={filters.q} onChange={(e) => updateFilter("q", e.target.value)} />
-          </div>
-
+        <div className="grid gap-3 md:grid-cols-3">
           <Select value={filters.empresaDestinoId} onChange={(e) => updateFilter("empresaDestinoId", e.target.value)}>
-            <option value="">Empresa afectada</option>
+            <option value="">Empresa</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>
                 {empresa.nombre}
@@ -246,7 +212,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
             ))}
           </Select>
 
-          <Input value={filters.categoria} onChange={(e) => updateFilter("categoria", e.target.value)} placeholder="Categoría" />
+          <Input list="categorias-options" value={filters.categoria} onChange={(e) => updateFilter("categoria", e.target.value)} placeholder="Categoría" />
+          <datalist id="categorias-options">
+            {CATEGORY_OPTIONS.map((categoria) => (
+              <option key={categoria} value={categoria} />
+            ))}
+          </datalist>
         </div>
 
         {hasActiveFilters ? (
@@ -256,11 +227,9 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
               className="rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-100"
               onClick={() => {
                 const reset = {
-                  q: "",
-                  empresaDestinoId: "",
+                  empresaDestinoId: isAdmin ? "" : currentUserEmpresaId,
                   prioridad: "",
-                  categoria: "",
-                  vistaEmpresa: isAdmin ? "all" : "mine"
+                  categoria: ""
                 };
                 setFilters(reset);
                 startTransition(() => {
@@ -285,7 +254,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId }
         </div>
       ) : null}
 
-      {historicoResueltas.length > 0 ? (
+      {isAdmin && historicoResueltas.length > 0 ? (
         <Card className="rounded-2xl p-3">
           <button
             type="button"

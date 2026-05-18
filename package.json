@@ -8,6 +8,7 @@
     "vercel-build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest run",
     "setup": "npx prisma generate && npx prisma migrate deploy && npx tsx prisma/seed.ts && node -e \"console.log('Setup completo. Ejecuta `npm run dev` para arrancar.')\"",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
@@ -26,6 +27,7 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.511.0",
     "next": "14.2.5",
+    "prisma": "^6.8.2",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "react-hook-form": "^7.53.0",
@@ -33,8 +35,7 @@
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.5.2",
     "uploadthing": "^7.4.4",
-    "zod": "^3.23.8",
-    "prisma": "^6.8.2"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.14.10",
@@ -46,7 +47,8 @@
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.7",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^4.1.6"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

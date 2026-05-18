@@ -19,7 +19,14 @@ export async function sendTicketNotification(params: {
   const recipients = uniqUserIds(params.toUserIds);
   if (recipients.length === 0) return;
 
-  const title = `[Incidencia #${String(params.ticketNumero).padStart(3, "0")}] ${params.titulo}`;
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: params.ticketId },
+    include: { destinos: { include: { empresa: true } } }
+  });
+  const empresaNombre =
+    ticket?.destinos.find((destino) => !destino.empresa.isGlobalTarget)?.empresa.nombre ??
+    "Incidencia";
+  const title = `[${empresaNombre}] #${String(params.ticketNumero).padStart(3, "0")} ${params.titulo}`;
 
   await prisma.notification.createMany({
     data: recipients.map((usuarioId) => ({

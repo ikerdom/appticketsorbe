@@ -1,12 +1,37 @@
+export const CORPORATE_DOMAINS = [
+  "editorialcep.com",
+  "entenova.com",
+  "entenova.gnosis.com",
+  "orbe.es",
+  "veprix.com"
+] as const;
+
+export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com"] as const;
+
+const LEGACY_TO_ACTIVE_DOMAIN: Record<string, string> = {
+  "bn-tic.es": "orbe.es",
+  "orbeformacion.com": "orbe.es",
+  "entenova-gnosis.com": "entenova.gnosis.com"
+};
+
 export function parseAllowedDomains() {
-  return (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
+  const envDomains = (process.env.ALLOWED_EMAIL_DOMAINS ?? "")
     .split(",")
     .map((value) => value.trim().toLowerCase())
     .filter(Boolean);
+
+  if (envDomains.length > 0) return envDomains;
+  return [...CORPORATE_DOMAINS, ...LEGACY_DOMAINS];
 }
 
 export function isEmailFormat(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+}
+
+export function parseEmailDomain(rawEmail: string) {
+  const email = rawEmail.trim().toLowerCase();
+  const domain = email.split("@")[1]?.trim().toLowerCase() ?? "";
+  return domain;
 }
 
 export function normalizeLoginEmail(rawEmail: string) {
@@ -14,21 +39,23 @@ export function normalizeLoginEmail(rawEmail: string) {
   const [local, domain] = email.split("@");
   if (!local || !domain) return email;
 
-  // Alias legacy permitidos
-  if (domain === "bn-tic.es" || domain === "orbeformacion.com") {
-    return `${local}@orbe.es`;
-  }
+  const normalizedDomain = LEGACY_TO_ACTIVE_DOMAIN[domain] ?? domain;
+  return `${local}@${normalizedDomain}`;
+}
 
-  // Compatibilidad de dominio histórico de Entenova para login
-  if (domain === "entenova-gnosis.com") {
-    return `${local}@entenova.gnosis.com`;
-  }
-
-  return email;
+export function isAllowedDomain(domain: string) {
+  return parseAllowedDomains().includes(domain.trim().toLowerCase());
 }
 
 export function isAllowedEmail(email: string) {
-  const domains = parseAllowedDomains();
-  const domain = email.split("@")[1]?.toLowerCase() ?? "";
-  return domains.includes(domain);
+  return isAllowedDomain(parseEmailDomain(email));
+}
+
+export function detectEmpresaFromDomain(domain: string) {
+  const normalized = LEGACY_TO_ACTIVE_DOMAIN[domain] ?? domain;
+  if (normalized === "editorialcep.com") return "Editorial CEP";
+  if (normalized === "entenova.com" || normalized === "entenova.gnosis.com") return "Entenova";
+  if (normalized === "orbe.es") return "ORBE";
+  if (normalized === "veprix.com") return "Veprix";
+  return null;
 }

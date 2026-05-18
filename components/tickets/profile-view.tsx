@@ -55,7 +55,7 @@ export function ProfileView({ profile }: { profile: ProfileData }) {
             <br />
             No puedes cambiar: email, empresa y rol.
             <br />
-            La contrasena de administradores es global para toda la app.
+            La contraseña de administradores es global para toda la app.
           </div>
           <div className="flex items-center gap-4">
             <div className="relative h-16 w-16 overflow-hidden rounded-full border">

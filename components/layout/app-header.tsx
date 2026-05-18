@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { CircleHelp, ChevronDown, X } from "lucide-react";
+import { CircleHelp, ChevronDown } from "lucide-react";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { CommandPaletteTrigger } from "@/components/layout/command-palette-trigger";
 
@@ -66,6 +66,11 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
         <div className="flex items-center gap-2">
           <CommandPaletteTrigger />
           <NotificationBell />
+          {isAdmin ? (
+            <Link href="/historico" className="hidden rounded-md border px-3 py-2 text-sm md:inline-flex">
+              Histórico
+            </Link>
+          ) : null}
           <Link
             href="/bienvenida"
             target="_blank"
@@ -87,14 +92,6 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
               </button>
               {openMenu === "admin" ? (
                 <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border bg-white p-1 shadow-xl">
-                  <button
-                    type="button"
-                    className="mb-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-slate-100"
-                    onClick={() => setOpenMenu("none")}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                    Cerrar
-                  </button>
                   <Link className="block rounded-md px-3 py-2 text-sm hover:bg-muted" href="/admin/usuarios">
                     Usuarios
                   </Link>
@@ -124,14 +121,6 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
             </button>
             {openMenu === "user" ? (
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border bg-white p-1 shadow-xl">
-                <button
-                  type="button"
-                  className="mb-1 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-slate-100"
-                  onClick={() => setOpenMenu("none")}
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Cerrar
-                </button>
                 <Link className="block rounded-md px-3 py-2 text-sm hover:bg-muted" href="/perfil">
                   Perfil
                 </Link>
@@ -140,7 +129,7 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
                   onClick={logout}
                 >
-                  Cerrar sesion
+                  Cerrar sesión
                 </button>
               </div>
             ) : null}

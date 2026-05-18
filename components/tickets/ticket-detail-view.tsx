@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Save, UserRound, X } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Save, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -114,8 +114,14 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
           <p className="text-xs font-semibold uppercase text-muted-foreground">{formatShortId(ticket)}</p>
           <h1 className="text-2xl font-bold">{ticket.titulo}</h1>
         </div>
-        <Link href="/" className="inline-flex h-9 w-9 items-center justify-center rounded-md border hover:bg-slate-100" aria-label="Cerrar y volver">
-          <X className="h-4 w-4" />
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-slate-100"
+          aria-label="Volver al listado"
+          title="Volver"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm">Volver al listado</span>
         </Link>
       </div>
 
@@ -253,8 +259,15 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
               )}
 
               {isAdmin ? (
-                <Button variant="destructive" className="w-full" onClick={() => void performAction("archive")}>
-                  Cerrar
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    if (!confirm("¿Seguro que quieres archivar esta incidencia?")) return;
+                    void performAction("archive");
+                  }}
+                >
+                  Archivar / Cerrar definitivamente
                 </Button>
               ) : null}
 

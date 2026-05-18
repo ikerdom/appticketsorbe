@@ -166,7 +166,7 @@ export function AdminUsersTable({
                 <TableHead>Email</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Rol</TableHead>
-                <TableHead>Ultima actividad</TableHead>
+                <TableHead>Última actividad</TableHead>
                 <TableHead>Acciones</TableHead>
               </TableRow>
             </TableHeader>
@@ -276,16 +276,16 @@ export function AdminUsersTable({
                                   startTransition(async () => {
                                     const response = await fetch(`/api/admin/usuarios/${usuario.id}/reset-password`, { method: "PATCH" });
                                     if (!response.ok) {
-                                      toast.error(await readError(response, "No se pudo resetear la contrasena"));
+                                      toast.error(await readError(response, "No se pudo restablecer la contraseña"));
                                       return;
                                     }
-                                    toast.success("Contrasena restablecida a la contrasena global");
+                                    toast.success("Contraseña restablecida a la contraseña global");
                                     router.refresh();
                                   });
                                   setMenuUserId(null);
                                 }}
                               >
-                                Resetear contrasena
+                                Restablecer contraseña
                               </button>
                             ) : null}
                           </div>
@@ -325,7 +325,7 @@ export function AdminUsersTable({
                 <option value="ADMIN">Admin</option>
               </select>
               {createForm.rol === "ADMIN" ? (
-                <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">Los administradores usan la contrasena global de la app.</p>
+                <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">Los administradores usan la contraseña global de la app.</p>
               ) : (
                 <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">Los usuarios normales entran solo con su email.</p>
               )}

@@ -86,9 +86,11 @@ export function NotificationBell() {
                   item.leida ? "bg-slate-100/60" : "bg-amber-50/70"
                 }`}
               onClick={async () => {
-                  await fetch(`/api/notifications/${item.id}/read`, { method: "POST" });
+                  const response = await fetch(`/api/notifications/${item.id}/read`, { method: "POST" });
+                  if (!response.ok) return;
                   setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, leida: true } : n)));
                   setUnreadCount((prev) => Math.max(0, prev - (item.leida ? 0 : 1)));
+                  await load();
                   setOpen(false);
                   if (item.ticketId) router.push(`/tickets/${item.ticketId}`);
                 }}
@@ -108,9 +110,11 @@ export function NotificationBell() {
               variant="ghost"
               size="sm"
               onClick={async () => {
-                await fetch("/api/notifications/read-all", { method: "POST" });
+                const response = await fetch("/api/notifications/read-all", { method: "POST" });
+                if (!response.ok) return;
                 setItems((prev) => prev.map((n) => ({ ...n, leida: true })));
                 setUnreadCount(0);
+                await load();
               }}
             >
               Marcar todas como leídas

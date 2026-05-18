@@ -23,6 +23,7 @@ model Empresa {
   ticketsOrigen    Ticket[] @relation("EmpresaOrigen")
   ticketsDestino   Ticket[] @relation("EmpresaDestino")
   ticketsNn        TicketEmpresaDestino[]
+  signupRequests   SignupRequest[]
 }
 
 model User {
@@ -181,6 +182,24 @@ model TicketEdicion {
 
   @@index([expiresAt])
   @@index([usuarioId])
+}
+
+model SignupRequest {
+  id        String               @id @default(cuid())
+  email     String
+  nombre    String
+  empresaId String?
+  empresa   Empresa?             @relation(fields: [empresaId], references: [id], onDelete: SetNull)
+  estado    SignupRequestEstado  @default(PENDIENTE)
+  createdAt DateTime             @default(now())
+
+  @@index([email, estado])
+}
+
+enum SignupRequestEstado {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
 }
 
 enum Estado {

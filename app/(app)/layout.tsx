@@ -1,4 +1,5 @@
-﻿import { AppHeader } from "@/components/layout/app-header";
+import { AppHeader } from "@/components/layout/app-header";
+import { AppHotkeys } from "@/components/layout/app-hotkeys";
 import { GlobalCommandPalette } from "@/components/layout/global-command-palette";
 import { requireCurrentPageUser } from "@/lib/data";
 
@@ -15,6 +16,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         isAdmin={user.rol === "ADMIN"}
       />
       <main className="mx-auto w-full max-w-7xl px-4 py-6">{children}</main>
+      <AppHotkeys isAdmin={user.rol === "ADMIN"} />
       <GlobalCommandPalette />
     </div>
   );

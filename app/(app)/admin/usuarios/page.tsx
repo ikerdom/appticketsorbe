@@ -25,7 +25,7 @@ export default async function AdminUsuariosPage() {
 
   return (
     <section className="space-y-4">
-      <h1 className="text-xl font-semibold">Administracion de usuarios</h1>
+      <h1 className="text-xl font-semibold">Administración de usuarios</h1>
       <AdminUsersTable usuarios={usuarios} empresas={empresas} />
     </section>
   );

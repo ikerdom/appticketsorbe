@@ -61,6 +61,7 @@ export default async function DashboardPage() {
         usuarios={usuarios}
         isAdmin={user.rol === "ADMIN"}
         currentUserId={user.id}
+        currentUserEmpresaId={user.empresaId}
       />
 
       <Link href="/tickets/nuevo" className="fixed bottom-5 right-5 z-40 md:hidden" aria-label="Crear incidencia">
