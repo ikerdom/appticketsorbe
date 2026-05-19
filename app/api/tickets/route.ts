@@ -12,13 +12,8 @@ export async function GET(request: NextRequest) {
     const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
     const filters = filtroSchema.parse(searchParams);
 
-    const userReadOnlyOtherCompany =
-      user.rol !== "ADMIN" &&
-      Boolean(filters.empresaDestinoId) &&
-      filters.empresaDestinoId !== user.empresaId;
-
     const andFilters: Prisma.TicketWhereInput[] = [
-      userReadOnlyOtherCompany ? { archivadoAt: null } : visibleTicketWhere(user),
+      visibleTicketWhere(user),
       { archivadoAt: null }
     ];
     if (filters.empresaOrigenId) andFilters.push({ empresaOrigenId: filters.empresaOrigenId });

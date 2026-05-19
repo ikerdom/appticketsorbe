@@ -25,7 +25,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
   const prioridad = asString(searchParams.prioridad) || "";
   const categoria = asString(searchParams.categoria) || "";
 
-  const and: Prisma.TicketWhereInput[] = [{ estado: "RESUELTO" }];
+  const and: Prisma.TicketWhereInput[] = [{ estado: "RESUELTO", archivadoAt: null }];
   if (empresa) and.push({ destinos: { some: { empresaId: empresa } } });
   if (prioridad) and.push({ prioridad: prioridad as any });
   if (categoria) {

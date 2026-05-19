@@ -89,6 +89,14 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     categoria: ""
   });
 
+  useEffect(() => {
+    if (initialEmpresaFilter === undefined) return;
+    const next = { empresaDestinoId: initialEmpresaFilter, prioridad: "", categoria: "" };
+    setFilters(next);
+    startTransition(() => { void refreshWithFilters(next); });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialEmpresaFilter]);
+
   const hasActiveFilters = useMemo(
     () => Boolean(filters.empresaDestinoId || filters.prioridad || filters.categoria),
     [filters]
@@ -236,7 +244,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
         <div className="grid gap-2.5 md:grid-cols-3">
           <Select value={filters.empresaDestinoId} onChange={(e) => updateFilter("empresaDestinoId", e.target.value)}>
-            <option value="">Todas las empresas</option>
+            <option value="">{isAdmin ? "Todas las empresas" : "Todas mis incidencias"}</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>
                 {empresa.nombre}

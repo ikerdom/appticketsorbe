@@ -35,7 +35,11 @@ export function visibleTicketWhere(user: { rol: Rol; empresaId: string }): Prism
   if (user.rol === Rol.ADMIN) return { archivadoAt: null };
   return {
     archivadoAt: null,
-    OR: [{ empresaOrigenId: user.empresaId }, { destinos: { some: { empresaId: user.empresaId } } }]
+    OR: [
+      { empresaOrigenId: user.empresaId },
+      { empresaDestinoId: user.empresaId },
+      { destinos: { some: { empresaId: user.empresaId } } }
+    ]
   };
 }
 

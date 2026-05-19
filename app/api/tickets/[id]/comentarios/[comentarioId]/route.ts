@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/data";
+import { puedeVerTicket } from "@/lib/permisos";
 
 export async function DELETE(
   _request: NextRequest,
@@ -8,6 +9,14 @@ export async function DELETE(
 ) {
   try {
     const user = await requireCurrentUser();
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: params.id },
+      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true } } } } }
+    });
+    if (!ticket || !puedeVerTicket(user, ticket)) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
 
     const comentario = await prisma.comentario.findUnique({
       where: { id: params.comentarioId },

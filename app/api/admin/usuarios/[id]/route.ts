@@ -7,11 +7,10 @@ import { ADMIN_PASSWORD } from "@/lib/auth/config";
 const GHOST_EMAIL = "usuario.eliminado@system.local";
 
 async function ensureGhostUser(empresaId: string) {
-  const existing = await prisma.user.findUnique({ where: { email: GHOST_EMAIL } });
-  if (existing) return existing;
-
-  return prisma.user.create({
-    data: {
+  return prisma.user.upsert({
+    where: { email: GHOST_EMAIL },
+    update: {},
+    create: {
       email: GHOST_EMAIL,
       nombre: "Usuario eliminado",
       name: "Usuario eliminado",

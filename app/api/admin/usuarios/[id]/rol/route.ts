@@ -1,7 +1,9 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import bcrypt from "bcryptjs";
 import { Rol } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/data";
+import { ADMIN_PASSWORD } from "@/lib/auth/config";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -15,7 +17,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     if (target.rol === "ADMIN" && rol === "USER") {
-      const adminCount = await prisma.user.count({ where: { rol: "ADMIN" } });
+      const adminCount = await prisma.user.count({ where: { rol: "ADMIN", activo: true } });
       if (adminCount <= 1) {
         return NextResponse.json({ error: "Debe haber al menos un administrador en el sistema." }, { status: 400 });
       }
@@ -25,9 +27,18 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "No puedes quitarte tu propio rol de administrador." }, { status: 400 });
     }
 
+    const updateData: Record<string, unknown> = { rol };
+    if (rol === "ADMIN") {
+      updateData.passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+      updateData.mustChangePassword = false;
+    } else {
+      updateData.passwordHash = null;
+      updateData.mustChangePassword = false;
+    }
+
     const usuario = await prisma.user.update({
       where: { id: params.id },
-      data: { rol }
+      data: updateData
     });
 
     return NextResponse.json({ usuario });

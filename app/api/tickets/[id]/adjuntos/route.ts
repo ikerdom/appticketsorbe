@@ -8,6 +8,7 @@ import { logTicketAction } from "@/lib/audit";
 
 const MAX_FILES_PER_REQUEST = 10;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
     if (!ticket || !puedeVerTicket(user, ticket)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    }
+
+    if (IS_VERCEL) {
+      return NextResponse.json({ error: "La subida de archivos requiere configurar el almacenamiento externo (UploadThing). Contacta con el administrador." }, { status: 501 });
     }
 
     const formData = await request.formData();

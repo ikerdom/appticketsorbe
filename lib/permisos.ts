@@ -11,10 +11,6 @@ export function esAdmin(user: Pick<User, "rol">) {
 export function puedeVerTicket(user: Pick<User, "rol" | "empresaId">, ticket: TicketViewShape) {
   if (user.rol === Rol.ADMIN) return true;
   if (ticket.empresaOrigenId === user.empresaId) return true;
-
-  const hasGlobal = ticket.destinos?.some((destino) => destino.empresa?.isGlobalTarget === true);
-  if (hasGlobal) return true;
-
   return ticket.destinos?.some((destino) => destino.empresaId === user.empresaId) ?? false;
 }
 
