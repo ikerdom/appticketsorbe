@@ -36,5 +36,5 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   await markTicketRead(ticket.id, user.id);
 
-  return <TicketDetailView ticket={ticket} isAdmin={user.rol === "ADMIN"} />;
+  return <TicketDetailView ticket={ticket} isAdmin={user.rol === "ADMIN"} currentUserId={user.id} />;
 }

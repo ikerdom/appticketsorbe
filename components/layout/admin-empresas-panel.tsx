@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function AdminEmpresasPanel({ empresas, allTickets, empresasList, usuarios, currentUserId, currentUserEmpresaId }: Props) {
-  const [showKanban, setShowKanban] = useState(false);
+  const [showKanban, setShowKanban] = useState(true);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
 
   const totalAbiertos = empresas.reduce((s, e) => s + e.abiertos, 0);

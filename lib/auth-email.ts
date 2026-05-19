@@ -9,9 +9,19 @@ export const CORPORATE_DOMAINS = [
 export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com"] as const;
 
 const LEGACY_TO_ACTIVE_DOMAIN: Record<string, string> = {
-  "bn-tic.es": "orbe.es",
   "orbeformacion.com": "orbe.es",
   "entenova-gnosis.com": "entenova.gnosis.com"
+};
+
+const DOMAIN_TO_EMPRESA: Record<string, string> = {
+  "editorialcep.com": "Editorial CEP",
+  "entenova.com": "Entenova",
+  "entenova.gnosis.com": "Entenova",
+  "entenova-gnosis.com": "Entenova",
+  "orbe.es": "ORBE",
+  "bn-tic.es": "ORBE",
+  "orbeformacion.com": "ORBE",
+  "veprix.com": "Veprix"
 };
 
 export function parseAllowedDomains() {
@@ -52,10 +62,5 @@ export function isAllowedEmail(email: string) {
 }
 
 export function detectEmpresaFromDomain(domain: string) {
-  const normalized = LEGACY_TO_ACTIVE_DOMAIN[domain] ?? domain;
-  if (normalized === "editorialcep.com") return "Editorial CEP";
-  if (normalized === "entenova.com" || normalized === "entenova.gnosis.com") return "Entenova";
-  if (normalized === "orbe.es") return "ORBE";
-  if (normalized === "veprix.com") return "Veprix";
-  return null;
+  return DOMAIN_TO_EMPRESA[domain.toLowerCase()] ?? null;
 }

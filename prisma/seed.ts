@@ -15,7 +15,8 @@ const IKER_CANONICAL_EMAIL = "iker.dominguez@entenova.gnosis.com";
 const IKER_LEGACY_EMAILS = ["iker.dominguez@entenova.com", "iker.dominguez@entenova-gnosis.com"];
 const IKER_NAME = "Iker Dominguez";
 
-const JOSE_EMAIL = "jose.perez@orbe.es";
+const JOSE_EMAIL = "jose.perez@bn-tic.es";
+const JOSE_LEGACY_EMAIL = "jose.perez@orbe.es";
 const JOSE_NAME = "Jose Perez";
 
 const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com", "global.local"];
@@ -214,6 +215,17 @@ async function ensureCanonicalIker(entenovaId: string) {
 }
 
 async function ensureJose(orbeId: string) {
+  // Rename legacy jose.perez@orbe.es → jose.perez@bn-tic.es if exists
+  const legacy = await prisma.user.findUnique({ where: { email: JOSE_LEGACY_EMAIL } });
+  if (legacy) {
+    const target = await prisma.user.findUnique({ where: { email: JOSE_EMAIL } });
+    if (!target) {
+      await prisma.user.update({ where: { id: legacy.id }, data: { email: JOSE_EMAIL } });
+    } else {
+      await mergeUsers(legacy.id, target.id);
+    }
+  }
+
   await prisma.user.upsert({
     where: { email: JOSE_EMAIL },
     update: {

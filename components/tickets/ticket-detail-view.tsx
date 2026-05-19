@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Save, UserRound } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Save, Trash2, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import type { TicketDetailData } from "@/types/ticket";
 interface TicketDetailViewProps {
   ticket: TicketDetailData;
   isAdmin: boolean;
+  currentUserId: string;
 }
 
 function formatShortId(ticket: TicketDetailData) {
@@ -30,10 +31,11 @@ function formatShortId(ticket: TicketDetailData) {
   return `#${slug}-${String(ticket.numero).padStart(4, "0")}`;
 }
 
-export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
+export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetailViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [comment, setComment] = useState("");
+  const [comentarios, setComentarios] = useState(ticket.comentarios);
   const [horasDedicadas, setHorasDedicadas] = useState<string>(ticket.horasDedicadas ? String(ticket.horasDedicadas) : "");
   const [notaResolucion, setNotaResolucion] = useState<string>(ticket.notaResolucion || "");
   const [editingContact, setEditingContact] = useState(false);
@@ -83,9 +85,22 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
         toast.error("No se pudo enviar el comentario");
         return;
       }
+      const { comentario } = await response.json();
+      setComentarios((prev) => [...prev, comentario]);
       setComment("");
       toast.success("Comentario añadido");
-      router.refresh();
+    });
+  }
+
+  function deleteComment(comentarioId: string) {
+    startTransition(async () => {
+      const response = await fetch(`/api/tickets/${ticket.id}/comentarios/${comentarioId}`, { method: "DELETE" });
+      if (!response.ok) {
+        toast.error("No se pudo eliminar el comentario");
+        return;
+      }
+      setComentarios((prev) => prev.filter((c) => c.id !== comentarioId));
+      toast.success("Comentario eliminado");
     });
   }
 
@@ -154,14 +169,26 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               <details className="rounded-lg border p-3" open>
-                <summary className="cursor-pointer text-sm font-medium">Ver mensajes ({ticket.comentarios.length})</summary>
+                <summary className="cursor-pointer text-sm font-medium">Ver mensajes ({comentarios.length})</summary>
                 <div className="mt-3 space-y-3">
-                  {ticket.comentarios.length === 0 ? <p className="text-sm text-muted-foreground">Sin mensajes todavía.</p> : null}
-                  {ticket.comentarios.map((item) => (
+                  {comentarios.length === 0 ? <p className="text-sm text-muted-foreground">Sin mensajes todavía.</p> : null}
+                  {comentarios.map((item) => (
                     <div key={item.id} className="rounded-lg border p-3 text-sm">
-                      <p className="mb-1 text-xs text-muted-foreground">
-                        {item.autor.email} · {formatDateTimeEs(item.createdAt)}
-                      </p>
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <p className="text-xs text-muted-foreground">
+                          {item.autor.email} · {formatDateTimeEs(item.createdAt)}
+                        </p>
+                        {(isAdmin || item.autor.id === currentUserId) ? (
+                          <button
+                            type="button"
+                            onClick={() => deleteComment(item.id)}
+                            className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            title="Eliminar mensaje"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
                       <p className="whitespace-pre-wrap">{item.contenido}</p>
                     </div>
                   ))}
