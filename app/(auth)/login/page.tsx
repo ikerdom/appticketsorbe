@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, X, Zap } from "lucide-react";
+import { ChevronDown, Eye, EyeOff, Loader2, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [showRequest, setShowRequest] = useState(false);
   const [requestName, setRequestName] = useState("");
   const [requestDone, setRequestDone] = useState(false);
+  const [showContact, setShowContact] = useState(false);
 
   const normalizedEmail = email.trim().toLowerCase();
   const domain = parseEmailDomain(normalizedEmail);
@@ -173,12 +174,26 @@ export default function LoginPage() {
                 ) : null}
               </div>
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                <p className="font-medium text-slate-700">Aplicación reservada para empresas del grupo.</p>
-                <p className="mt-1">¿Necesitas acceso? Contacta con Iker:</p>
-                <a href="tel:677117320" className="mt-1 inline-flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
-                  677 11 73 20
-                </a>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-600">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between text-left"
+                  onClick={() => setShowContact((v) => !v)}
+                >
+                  <span className="font-medium text-slate-700">Aplicación reservada para empresas del grupo</span>
+                  <ChevronDown className={`h-3.5 w-3.5 text-slate-400 transition-transform ${showContact ? "rotate-180" : ""}`} />
+                </button>
+                {showContact ? (
+                  <div className="mt-2 space-y-1 border-t border-slate-200 pt-2">
+                    <p className="text-slate-500">¿Necesitas acceso? Contacta con el administrador:</p>
+                    <a href="tel:677117320" className="flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
+                      677 11 73 20
+                    </a>
+                    <a href="mailto:iker.dominguez@entenova-gnosis.com" className="flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
+                      iker.dominguez@entenova-gnosis.com
+                    </a>
+                  </div>
+                ) : null}
               </div>
 
               {needsPassword ? (

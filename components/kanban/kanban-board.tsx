@@ -23,6 +23,7 @@ interface KanbanBoardProps {
   isAdmin: boolean;
   currentUserId: string;
   currentUserEmpresaId: string;
+  initialEmpresaFilter?: string;
 }
 
 const COLUMN_STYLES: Record<Estado, { header: string; dot: string; badge: string; dropzone: string }> = {
@@ -75,7 +76,7 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
 
 const CATEGORY_OPTIONS = ["Emails", "Seguridad", "Técnico", "Máquina", "Impresora", "Pedidos", "Presupuestos", "Otros"];
 
-export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, currentUserEmpresaId }: KanbanBoardProps) {
+export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, currentUserEmpresaId, initialEmpresaFilter }: KanbanBoardProps) {
   const [tickets, setTickets] = useState<TicketCardData[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
@@ -83,7 +84,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const [filters, setFilters] = useState({
-    empresaDestinoId: "",
+    empresaDestinoId: initialEmpresaFilter ?? "",
     prioridad: "",
     categoria: ""
   });
