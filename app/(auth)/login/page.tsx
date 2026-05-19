@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Eye, EyeOff, Loader2, X } from "lucide-react";
+import { Eye, EyeOff, Loader2, X, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -119,102 +119,127 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md rounded-2xl border shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-3xl font-semibold tracking-tight">Incidencia</CardTitle>
-          <CardDescription>Sistema de tickets</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="tu@empresa.com"
-                  autoComplete="email"
-                  autoFocus
-                  readOnly={needsPassword}
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                />
-                {needsPassword ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setNeedsPassword(false);
-                      setPassword("");
-                      setError(null);
-                    }}
-                  >
-                    Cambiar
-                  </Button>
+    <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
+      {/* Background blobs */}
+      <div className="pointer-events-none absolute -left-40 -top-40 h-96 w-96 rounded-full bg-indigo-500/15 blur-3xl" />
+      <div className="pointer-events-none absolute -bottom-40 -right-20 h-80 w-80 rounded-full bg-purple-600/10 blur-3xl" />
+      <div className="pointer-events-none absolute left-1/2 top-1/3 h-64 w-64 -translate-x-1/2 rounded-full bg-blue-500/5 blur-2xl" />
+
+      <div className="relative w-full max-w-md">
+        {/* Branding */}
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500 shadow-xl shadow-indigo-500/30">
+            <Zap className="h-7 w-7 text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">Incidencia</h1>
+          <p className="mt-1.5 text-sm text-slate-400">Plataforma de gestión de tickets del grupo</p>
+          <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
+            <span className="rounded-full bg-slate-800 px-2.5 py-1">EnteNova</span>
+            <span className="rounded-full bg-slate-800 px-2.5 py-1">Veprix</span>
+            <span className="rounded-full bg-slate-800 px-2.5 py-1">ORBE</span>
+            <span className="rounded-full bg-slate-800 px-2.5 py-1">CEP</span>
+          </div>
+        </div>
+
+        <Card className="border-slate-700/60 bg-white shadow-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold text-slate-900">Iniciar sesión</CardTitle>
+            <CardDescription>Accede con tu correo corporativo</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={onSubmit}>
+              <div className="space-y-1.5">
+                <Label htmlFor="email">Email corporativo</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="tu@empresa.com"
+                    autoComplete="email"
+                    autoFocus
+                    readOnly={needsPassword}
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                  />
+                  {needsPassword ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setNeedsPassword(false);
+                        setPassword("");
+                        setError(null);
+                      }}
+                    >
+                      Cambiar
+                    </Button>
+                  ) : null}
+                </div>
+                {!domainAllowed ? (
+                  <p className="text-xs text-red-600">Correo no pertenece al grupo. Pide alta al administrador.</p>
                 ) : null}
               </div>
-              {!domainAllowed ? (
-                <p className="text-xs text-red-600">Este correo no pertenece a una empresa del grupo. Pide alta al administrador.</p>
-              ) : null}
-            </div>
 
-            <div className="rounded-lg border bg-slate-50 p-3 text-xs text-slate-700">
-              <p className="mb-1 font-medium">Dominios corporativos aceptados:</p>
-              <ul className="list-disc space-y-0.5 pl-4">
-                {DOMINIOS_TEXT.map((item) => (
-                  <li key={item}>{item}</li>
-                ))}
-              </ul>
-              <p className="mt-2">Se admiten también dominios legacy del grupo.</p>
-            </div>
-
-            {needsPassword ? (
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Contraseña</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    autoFocus
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                  />
-                  <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+              <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-800">
+                <p className="mb-1.5 font-semibold">Dominios aceptados:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {DOMINIOS_TEXT.map((item) => (
+                    <span key={item} className="rounded-full bg-indigo-100 px-2 py-0.5 font-medium text-indigo-700">{item}</span>
+                  ))}
                 </div>
               </div>
-            ) : null}
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
-
-            <Button type="submit" className="w-full" disabled={loading || !domainAllowed}>
-              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {submitLabel}
-            </Button>
-
-            <div className="flex items-center justify-between text-xs">
-              <Link className="text-blue-700 underline" href="/recuperar">
-                ¿Olvidaste tu contraseña?
-              </Link>
-              {showRequest ? (
-                <button type="button" className="text-blue-700 underline" onClick={() => setShowRequest(true)}>
-                  Solicitar alta
-                </button>
+              {needsPassword ? (
+                <div className="space-y-1.5">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="current-password"
+                      autoFocus
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:bg-slate-100"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
               ) : null}
-            </div>
-          </form>
 
-          <p className="mt-4 text-xs text-muted-foreground">¿Problemas para acceder? Contacta con Iker.</p>
-        </CardContent>
-      </Card>
+              {error ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {error}
+                </div>
+              ) : null}
+
+              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading || !domainAllowed}>
+                {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {submitLabel}
+              </Button>
+
+              <div className="flex items-center justify-between text-xs">
+                <Link className="text-indigo-600 hover:underline" href="/recuperar">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+                {showRequest ? (
+                  <button type="button" className="text-indigo-600 hover:underline" onClick={() => setShowRequest(true)}>
+                    Solicitar alta
+                  </button>
+                ) : null}
+              </div>
+            </form>
+
+            <p className="mt-4 text-center text-xs text-slate-400">¿Problemas? Contacta con Iker.</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {showRequest ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowRequest(false)}>

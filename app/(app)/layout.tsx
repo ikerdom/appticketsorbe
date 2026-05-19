@@ -7,7 +7,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await requireCurrentPageUser();
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-background">
       <AppHeader
         empresaNombre={user.empresa.nombre ?? "Mi empresa"}
         empresaColor={user.empresa.color}
