@@ -142,8 +142,8 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
           </div>
 
           <div className="space-y-2">
-            <Label>Destinatarios</Label>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Destinatarios">
+            <Label>Empresa(s) afectada(s)</Label>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Empresa afectada">
               <button
                 type="button"
                 onClick={toggleTodas}

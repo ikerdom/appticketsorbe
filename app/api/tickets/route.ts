@@ -17,7 +17,15 @@ export async function GET(request: NextRequest) {
       { archivadoAt: null }
     ];
     if (filters.empresaOrigenId) andFilters.push({ empresaOrigenId: filters.empresaOrigenId });
-    if (filters.empresaDestinoId) andFilters.push({ destinos: { some: { empresaId: filters.empresaDestinoId } } });
+    if (filters.empresaDestinoId) {
+      andFilters.push({
+        OR: [
+          { empresaOrigenId: filters.empresaDestinoId },
+          { empresaDestinoId: filters.empresaDestinoId },
+          { destinos: { some: { empresaId: filters.empresaDestinoId } } }
+        ]
+      });
+    }
     if (filters.prioridad) andFilters.push({ prioridad: filters.prioridad });
     if (filters.categoria) {
       andFilters.push({
@@ -40,7 +48,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    if (user.rol === "ADMIN" && (filters.vistaEmpresa ?? "mine") === "mine") {
+    if (user.rol === "ADMIN" && filters.vistaEmpresa === "mine") {
       andFilters.push({
         OR: [{ empresaOrigenId: user.empresaId }, { destinos: { some: { empresaId: user.empresaId } } }]
       });

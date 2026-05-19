@@ -103,7 +103,7 @@ export default function LoginPage() {
         setError("Credenciales incorrectas.");
         return;
       }
-      router.push(data.redirect || "/admin/dashboard");
+      router.push(data.redirect || "/");
       router.refresh();
     } catch {
       setError("No se pudo conectar con el servidor.");

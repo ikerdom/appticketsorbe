@@ -85,7 +85,7 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Tickets por empresa destino</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Tickets por empresa afectada</CardTitle></CardHeader>
           <CardContent className="h-72">
             {data.destino.length === 0 ? (
               <EmptyChart message="Aún no hay tickets en este periodo." />

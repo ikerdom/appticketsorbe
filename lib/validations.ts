@@ -4,7 +4,7 @@ export const nuevoTicketSchema = z
   .object({
     titulo: z.string().min(3, "El título es obligatorio"),
     descripcion: z.string().min(10, "La descripción es obligatoria"),
-    destinatarios: z.array(z.string().min(1)).min(1, "Selecciona al menos un destinatario"),
+    destinatarios: z.array(z.string().min(1)).min(1, "Selecciona al menos una empresa afectada"),
     personaAfectada: z.string().optional(),
     contactoNombre: z.string().min(2, "Nombre / recurso obligatorio"),
     contactoTelefono: z.string().optional(),

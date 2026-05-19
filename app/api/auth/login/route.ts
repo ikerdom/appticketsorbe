@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const response = NextResponse.json({
       ok: true,
       role: user.rol,
-      redirect: user.rol === "ADMIN" ? "/admin/dashboard" : "/"
+      redirect: "/"
     });
 
     response.cookies.set(APP_SESSION_COOKIE, session.token, cookieCommonOptions(session.expires));

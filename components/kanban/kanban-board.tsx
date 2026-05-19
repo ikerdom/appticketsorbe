@@ -244,7 +244,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
         <div className="grid gap-2.5 md:grid-cols-3">
           <Select value={filters.empresaDestinoId} onChange={(e) => updateFilter("empresaDestinoId", e.target.value)}>
-            <option value="">{isAdmin ? "Todas las empresas" : "Todas mis incidencias"}</option>
+            <option value="">{isAdmin ? "Todas (empresa afectada)" : "Todas mis incidencias"}</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>
                 {empresa.nombre}
