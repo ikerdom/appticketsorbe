@@ -13,6 +13,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const body = (await request.json()) as {
       action?: TicketAction;
       estado?: "ABIERTO" | "EN_CURSO" | "RESUELTO";
+      horasDedicadas?: number;
+      notaResolucion?: string;
     };
 
     const ticket = await prisma.ticket.findUnique({
@@ -35,9 +37,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       accionHistorial = "TICKET_COGIDO";
       detalle = { de: ticket.estado, a: "EN_CURSO", asignadoId: user.id };
     } else if (action === "resolve") {
-      data = { estado: "RESUELTO", resueltoAt: new Date() };
+      data = {
+        estado: "RESUELTO",
+        resueltoAt: new Date(),
+        ...(body.horasDedicadas != null ? { horasDedicadas: body.horasDedicadas } : {}),
+        ...(body.notaResolucion ? { notaResolucion: body.notaResolucion } : {})
+      };
       accionHistorial = "ESTADO_CAMBIADO";
-      detalle = { de: ticket.estado, a: "RESUELTO" };
+      detalle = { de: ticket.estado, a: "RESUELTO", horasDedicadas: body.horasDedicadas, notaResolucion: body.notaResolucion };
     } else if (action === "reopen") {
       data = { estado: "ABIERTO", resueltoAt: null };
       accionHistorial = "ESTADO_CAMBIADO";

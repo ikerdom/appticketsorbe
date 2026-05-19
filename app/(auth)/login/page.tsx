@@ -10,13 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { detectEmpresaFromDomain, isAllowedDomain, isEmailFormat, parseEmailDomain } from "@/lib/auth-email";
 
-const DOMINIOS_TEXT = [
-  "Editorial CEP: @editorialcep.com",
-  "Entenova: @entenova.com",
-  "ORBE: @orbe.es",
-  "Veprix: @veprix.com"
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -180,13 +173,12 @@ export default function LoginPage() {
                 ) : null}
               </div>
 
-              <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-3 text-xs text-indigo-800">
-                <p className="mb-1.5 font-semibold">Dominios aceptados:</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {DOMINIOS_TEXT.map((item) => (
-                    <span key={item} className="rounded-full bg-indigo-100 px-2 py-0.5 font-medium text-indigo-700">{item}</span>
-                  ))}
-                </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                <p className="font-medium text-slate-700">Aplicación reservada para empresas del grupo.</p>
+                <p className="mt-1">¿Necesitas acceso? Contacta con Iker:</p>
+                <a href="tel:677117320" className="mt-1 inline-flex items-center gap-1 font-semibold text-indigo-600 hover:underline">
+                  677 11 73 20
+                </a>
               </div>
 
               {needsPassword ? (

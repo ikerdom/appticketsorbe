@@ -34,6 +34,8 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [comment, setComment] = useState("");
+  const [horasDedicadas, setHorasDedicadas] = useState<string>(ticket.horasDedicadas ? String(ticket.horasDedicadas) : "");
+  const [notaResolucion, setNotaResolucion] = useState<string>(ticket.notaResolucion || "");
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -241,6 +243,15 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
               <p className="text-xs text-muted-foreground">Creado: {formatDateTimeEs(ticket.createdAt)}</p>
               <p className="text-xs text-muted-foreground">Actualizado: {formatDateTimeEs(ticket.updatedAt)}</p>
               {ticket.resueltoAt ? <p className="text-xs text-muted-foreground">Resuelto: {formatDateTimeEs(ticket.resueltoAt)}</p> : null}
+              {ticket.horasDedicadas != null ? (
+                <p className="text-xs text-muted-foreground">Horas dedicadas: {ticket.horasDedicadas}h</p>
+              ) : null}
+              {ticket.notaResolucion ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
+                  <p className="mb-1 text-xs font-semibold text-emerald-700">Cómo se resolvió</p>
+                  <p className="whitespace-pre-wrap text-xs text-emerald-800">{ticket.notaResolucion}</p>
+                </div>
+              ) : null}
 
               {ticket.estado !== "EN_CURSO" ? (
                 <Button className="w-full" onClick={() => void performAction("take")}>
@@ -249,9 +260,32 @@ export function TicketDetailView({ ticket, isAdmin }: TicketDetailViewProps) {
               ) : null}
 
               {canResolve ? (
-                <Button className="w-full" onClick={() => void performAction("resolve")}>
-                  Marcar resuelta
-                </Button>
+                <div className="space-y-2 rounded-lg border border-dashed p-3">
+                  <p className="text-xs font-semibold text-slate-600">Resolver incidencia</p>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">¿Cómo se resolvió? (opcional)</label>
+                    <Textarea
+                      rows={3}
+                      placeholder="Describe qué hiciste para solucionarlo…"
+                      value={notaResolucion}
+                      onChange={(e) => setNotaResolucion(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">Horas dedicadas (opcional)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      placeholder="ej: 2.5"
+                      value={horasDedicadas}
+                      onChange={(e) => setHorasDedicadas(e.target.value)}
+                    />
+                  </div>
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion || undefined })}>
+                    Marcar resuelta
+                  </Button>
+                </div>
               ) : (
                 <Button variant="outline" className="w-full" onClick={() => void performAction("set_estado", { estado: "EN_CURSO" })}>
                   Volver a en curso

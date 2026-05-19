@@ -88,9 +88,8 @@ export function NotificationBell() {
               onClick={async () => {
                   const response = await fetch(`/api/notifications/${item.id}/read`, { method: "POST" });
                   if (!response.ok) return;
-                  setItems((prev) => prev.map((n) => (n.id === item.id ? { ...n, leida: true } : n)));
+                  setItems((prev) => prev.filter((n) => n.id !== item.id));
                   setUnreadCount((prev) => Math.max(0, prev - (item.leida ? 0 : 1)));
-                  await load();
                   setOpen(false);
                   if (item.ticketId) router.push(`/tickets/${item.ticketId}`);
                 }}
