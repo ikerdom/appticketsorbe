@@ -24,6 +24,8 @@ model Empresa {
   ticketsDestino   Ticket[] @relation("EmpresaDestino")
   ticketsNn        TicketEmpresaDestino[]
   signupRequests   SignupRequest[]
+  tareas           Tarea[]
+  propuestas       Propuesta[]
 }
 
 model User {
@@ -37,9 +39,12 @@ model User {
   activo          Boolean  @default(true)
   empresaId       String
   empresa         Empresa  @relation(fields: [empresaId], references: [id])
-  ticketsCreados  Ticket[] @relation("Creador")
+  ticketsCreados   Ticket[] @relation("Creador")
   ticketsAsignados Ticket[] @relation("Asignado")
-  comentarios     Comentario[]
+  comentarios      Comentario[]
+  tareasCreadas    Tarea[]  @relation("TareaCreador")
+  tareasAsignadas  Tarea[]  @relation("TareaAsignado")
+  propuestas       Propuesta[]
   createdAt       DateTime @default(now())
   lastSeenAt      DateTime?
   bienvenidaVista Boolean  @default(false)
@@ -202,6 +207,62 @@ enum SignupRequestEstado {
   PENDIENTE
   APROBADA
   RECHAZADA
+}
+
+model Tarea {
+  id               String      @id @default(cuid())
+  numero           Int         @unique @default(autoincrement())
+  titulo           String
+  descripcion      String?     @db.Text
+  estado           TareaEstado @default(PENDIENTE)
+  prioridad        Prioridad   @default(MEDIA)
+  empresaId        String
+  empresa          Empresa     @relation(fields: [empresaId], references: [id])
+  creadorId        String
+  creador          User        @relation("TareaCreador", fields: [creadorId], references: [id])
+  asignadoId       String?
+  asignado         User?       @relation("TareaAsignado", fields: [asignadoId], references: [id])
+  contactoNombre   String?
+  contactoTelefono String?
+  resueltoAt       DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([empresaId])
+  @@index([estado])
+}
+
+model Propuesta {
+  id            String          @id @default(cuid())
+  titulo        String
+  descripcion   String          @db.Text
+  estado        PropuestaEstado @default(PENDIENTE)
+  autorNombre   String
+  autorEmail    String?
+  autorTelefono String?
+  empresaId     String?
+  empresa       Empresa?        @relation(fields: [empresaId], references: [id])
+  userId        String?
+  user          User?           @relation(fields: [userId], references: [id])
+  notaAdmin     String?         @db.Text
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([estado])
+  @@index([userId])
+}
+
+enum TareaEstado {
+  PENDIENTE
+  EN_CURSO
+  HECHO
+}
+
+enum PropuestaEstado {
+  PENDIENTE
+  REVISADA
+  ACEPTADA
+  DESCARTADA
 }
 
 enum Estado {

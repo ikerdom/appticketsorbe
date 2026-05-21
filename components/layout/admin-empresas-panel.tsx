@@ -31,28 +31,38 @@ export function AdminEmpresasPanel({ empresas, allTickets, empresasList, usuario
 
   const totalAbiertos = empresas.reduce((s, e) => s + e.abiertos, 0);
   const totalEnCurso = empresas.reduce((s, e) => s + e.enCurso, 0);
+  const totalResueltos = empresas.reduce((s, e) => s + e.resueltos, 0);
+  const totalSinLeer = allTickets.filter((t) => t.unread).length;
 
   return (
     <div className="space-y-4">
       {/* Summary row */}
-      <div className="flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm ring-1 ring-slate-900/5">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-blue-600">{totalAbiertos}</span>
-          <span className="text-xs text-slate-500">abiertas</span>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border bg-red-50 border-red-100 px-4 py-3">
+          <p className="text-2xl font-bold text-red-600">{totalAbiertos}</p>
+          <p className="text-xs font-medium text-red-500/70">Abiertas</p>
         </div>
-        <div className="h-5 w-px bg-slate-200" />
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold text-amber-600">{totalEnCurso}</span>
-          <span className="text-xs text-slate-500">en curso</span>
+        <div className="rounded-xl border bg-amber-50 border-amber-100 px-4 py-3">
+          <p className="text-2xl font-bold text-amber-600">{totalEnCurso}</p>
+          <p className="text-xs font-medium text-amber-500/70">En curso</p>
         </div>
-        <div className="ml-auto flex gap-2">
-          <Link href="/admin/dashboard" className="rounded-lg border px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">
-            Dashboard →
-          </Link>
-          <Link href="/tickets/nuevo" className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">
-            <Plus className="mr-1 inline h-3 w-3" />
-            Nueva
-          </Link>
+        <div className="rounded-xl border bg-emerald-50 border-emerald-100 px-4 py-3">
+          <p className="text-2xl font-bold text-emerald-600">{totalResueltos}</p>
+          <p className="text-xs font-medium text-emerald-500/70">Resueltas</p>
+        </div>
+        <div className="rounded-xl border bg-indigo-50 border-indigo-100 px-4 py-3 flex items-center justify-between">
+          <div>
+            <p className="text-2xl font-bold text-indigo-600">{totalSinLeer}</p>
+            <p className="text-xs font-medium text-indigo-500/70">Sin leer</p>
+          </div>
+          <div className="flex flex-col gap-1">
+            <Link href="/tickets/nuevo" className="rounded-lg bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700 whitespace-nowrap">
+              <Plus className="mr-0.5 inline h-3 w-3" />Nueva
+            </Link>
+            <Link href="/admin/dashboard" className="rounded-lg border px-2.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-slate-50 whitespace-nowrap text-center">
+              Dashboard
+            </Link>
+          </div>
         </div>
       </div>
 
