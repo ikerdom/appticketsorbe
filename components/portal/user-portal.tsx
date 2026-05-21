@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Plus, Ticket, CheckSquare, Lightbulb, Clock, CheckCircle2,
-  AlertCircle, Circle, MessageSquare, ChevronRight
+  AlertCircle, MessageSquare, ChevronRight
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
 import { TareasBoard } from "@/components/tareas/tareas-board";

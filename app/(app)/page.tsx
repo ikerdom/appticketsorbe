@@ -17,9 +17,9 @@ export default async function DashboardPage() {
     prisma.ticket.findMany({
       where: visibleTicketWhere(user),
       include: {
-        empresaOrigen: { select: { id: true, nombre: true, color: true } },
-        empresaDestino: { select: { id: true, nombre: true, color: true } },
-        destinos: { include: { empresa: { select: { id: true, nombre: true, color: true } } } },
+        empresaOrigen: true,
+        empresaDestino: true,
+        destinos: { include: { empresa: true } },
         creador: { select: { id: true, email: true, nombre: true, name: true } },
         asignado: { select: { id: true, email: true, nombre: true, name: true, image: true } },
         _count: { select: { comentarios: true } }
