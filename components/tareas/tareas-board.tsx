@@ -99,12 +99,12 @@ function TareaCard({
   }
 
   function deleteTarea() {
-    if (!confirm("¿Eliminar esta tarea?")) return;
+    if (!confirm("¿Eliminar este ticket?")) return;
     startTransition(async () => {
       const res = await fetch(`/api/tareas/${tarea.id}`, { method: "DELETE" });
       if (!res.ok) { toast.error("No se pudo eliminar"); return; }
       onDelete(tarea.id);
-      toast.success("Tarea eliminada");
+      toast.success("Ticket eliminado");
     });
   }
 
@@ -225,7 +225,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       setTareas(prev => [tarea, ...prev]);
       setForm({ titulo: "", descripcion: "", prioridad: "MEDIA", contactoNombre: "", contactoTelefono: "" });
       setShowForm(false);
-      toast.success("Tarea creada");
+      toast.success("Ticket creado");
     });
   }
 
@@ -240,7 +240,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <span className="rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-600">
-            {pendientes.length + enCurso.length} activas
+            {pendientes.length + enCurso.length} activos
           </span>
         </div>
         <Button
@@ -249,7 +249,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
           size="sm"
         >
           <Plus className="mr-1 h-4 w-4" />
-          Nueva tarea
+          Nuevo ticket
         </Button>
       </div>
 
@@ -257,12 +257,12 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       {showForm && (
         <Card className="rounded-2xl border-indigo-100 bg-indigo-50/40">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Nueva tarea</CardTitle>
+            <CardTitle className="text-base">Nuevo ticket</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-3">
               <Input
-                placeholder="Título de la tarea *"
+                placeholder="Título del ticket *"
                 value={form.titulo}
                 onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
                 required
@@ -301,7 +301,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
                 <Button type="submit" disabled={isPending} className="bg-indigo-600 hover:bg-indigo-700">
-                  {isPending ? "Creando..." : "Crear tarea"}
+                  {isPending ? "Creando..." : "Crear ticket"}
                 </Button>
               </div>
             </form>
@@ -312,10 +312,10 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       {/* Board */}
       {pendientes.length === 0 && enCurso.length === 0 && !showForm ? (
         <div className="rounded-xl border border-dashed bg-white p-12 text-center shadow-sm">
-          <p className="mb-1 text-sm font-medium text-slate-600">Sin tareas activas</p>
-          <p className="mb-4 text-xs text-slate-400">Crea una tarea para empezar a gestionarla</p>
+          <p className="mb-1 text-sm font-medium text-slate-600">Sin tickets activos</p>
+          <p className="mb-4 text-xs text-slate-400">Crea un ticket para empezar a gestionarlo</p>
           <Button onClick={() => setShowForm(true)} className="bg-indigo-600 hover:bg-indigo-700" size="sm">
-            <Plus className="mr-1 h-4 w-4" /> Nueva tarea
+            <Plus className="mr-1 h-4 w-4" /> Nuevo ticket
           </Button>
         </div>
       ) : (
@@ -359,7 +359,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
             onClick={() => setShowHechas(v => !v)}
             className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
           >
-            <span>✓ Tareas completadas · {hechas.length}</span>
+            <span>✓ Tickets completados · {hechas.length}</span>
             <span className="text-xs text-slate-400">{showHechas ? "Ocultar" : "Ver"}</span>
           </button>
           {showHechas && (

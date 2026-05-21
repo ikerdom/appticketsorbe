@@ -107,7 +107,6 @@ export default async function DashboardPage() {
         propuestas={propuestas}
         currentUserId={user.id}
         usuarios={usuarios}
-        empresaNombre={user.empresa.nombre ?? ""}
         autorNombre={user.nombre ?? user.name ?? user.email ?? ""}
         autorEmail={user.email ?? ""}
       />

@@ -4,7 +4,7 @@ import { requireCurrentPageUser } from "@/lib/data";
 import { TareasBoard } from "@/components/tareas/tareas-board";
 
 export const metadata: Metadata = {
-  title: "Tareas · Incidencia"
+  title: "Tickets · Incidencia"
 };
 
 export default async function TareasPage() {
@@ -31,9 +31,9 @@ export default async function TareasPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tareas</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tickets</h1>
         <p className="text-sm text-slate-500">
-          {isAdmin ? "Gestión de tareas · todas las empresas" : "Tareas de tu equipo"}
+          {isAdmin ? "Gestión de tickets · todas las empresas" : "Tickets de tu equipo"}
         </p>
       </div>
       <TareasBoard

@@ -4,10 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/data";
 
 const createSchema = z.object({
-  titulo: z.string().min(3, "Título obligatorio"),
-  descripcion: z.string().min(10, "Descripción obligatoria"),
-  autorNombre: z.string().min(2, "Nombre obligatorio"),
-  autorEmail: z.string().email().optional().or(z.literal("")),
+  titulo: z.string().min(1, "Título obligatorio"),
+  descripcion: z.string().min(1, "Descripción obligatoria"),
+  autorNombre: z.string().min(1, "Nombre obligatorio"),
+  autorEmail: z.string().email().optional().or(z.literal("")).optional(),
   autorTelefono: z.string().optional()
 });
 

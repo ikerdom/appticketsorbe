@@ -74,16 +74,11 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
             <NotificationBell />
           </div>
           <Link href="/tareas" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
-            Tareas
+            Tickets
           </Link>
           <Link href={isAdmin ? "/admin/propuestas" : "/propuestas"} className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
             Propuestas
           </Link>
-          {isAdmin ? (
-            <Link href="/historico" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
-              Histórico
-            </Link>
-          ) : null}
           <Link
             href="/bienvenida"
             target="_blank"
@@ -117,9 +112,6 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/admin/propuestas">
                     Propuestas
                   </Link>
-                  <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/historico">
-                    Histórico
-                  </Link>
                 </div>
               ) : null}
             </div>
@@ -144,11 +136,16 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   Perfil
                 </Link>
                 <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white md:hidden" href="/tareas">
-                  Tareas
+                  Tickets
                 </Link>
                 <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white md:hidden" href={isAdmin ? "/admin/propuestas" : "/propuestas"}>
                   Propuestas
                 </Link>
+                {isAdmin ? (
+                  <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/historico">
+                    Histórico
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   className="w-full rounded-md px-3 py-2 text-left text-sm text-slate-300 hover:bg-slate-800 hover:text-white"
