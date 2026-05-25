@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
-import { Trash2, Lightbulb, Clock, CheckCircle2, XCircle, Eye, Plus } from "lucide-react";
+import { Lightbulb, Clock, CheckCircle2, XCircle, Eye, Plus } from "lucide-react";
 import { formatDateTimeEs } from "@/lib/dates";
 import { PropuestaForm } from "./propuesta-form";
 import { Button } from "@/components/ui/button";
@@ -41,14 +40,6 @@ export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultA
   function onCreated(p: unknown) {
     setPropuestas(prev => [p as Propuesta, ...prev]);
     setShowForm(false);
-  }
-
-  async function deletePropuesta(id: string) {
-    if (!confirm("¿Eliminar esta propuesta?")) return;
-    const res = await fetch(`/api/propuestas/${id}`, { method: "DELETE" });
-    if (!res.ok) { toast.error("No se pudo eliminar"); return; }
-    setPropuestas(prev => prev.filter(p => p.id !== id));
-    toast.success("Propuesta eliminada");
   }
 
   return (
@@ -92,13 +83,7 @@ export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultA
                       {cfg.icon}{cfg.label}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => deletePropuesta(p.id)}
-                    className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  {/* Solo admin puede eliminar — botón no aparece aquí */}
                 </div>
                 <p className="mb-1 text-sm font-semibold text-slate-800">{p.titulo}</p>
                 <p className="mb-2 text-xs text-slate-500 whitespace-pre-line">{p.descripcion}</p>

@@ -33,8 +33,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     const propuesta = await prisma.propuesta.findUnique({ where: { id: params.id } });
     if (!propuesta) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    const canDelete = user.rol === "ADMIN" || propuesta.userId === user.id;
-    if (!canDelete) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (user.rol !== "ADMIN") return NextResponse.json({ error: "Solo administradores pueden eliminar" }, { status: 403 });
 
     await prisma.propuesta.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });

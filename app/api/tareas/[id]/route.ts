@@ -51,8 +51,7 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     const tarea = await prisma.tarea.findUnique({ where: { id: params.id } });
     if (!tarea) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    const canDelete = user.rol === "ADMIN" || tarea.creadorId === user.id;
-    if (!canDelete) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (user.rol !== "ADMIN") return NextResponse.json({ error: "Solo administradores pueden eliminar" }, { status: 403 });
 
     await prisma.tarea.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
