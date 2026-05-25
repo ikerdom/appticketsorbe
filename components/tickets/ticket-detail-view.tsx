@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
 import { formatDateTimeEs } from "@/lib/dates";
 import type { TicketDetailData } from "@/types/ticket";
+import { TicketLifecycle } from "@/components/tickets/ticket-lifecycle";
 
 interface TicketDetailViewProps {
   ticket: TicketDetailData;
@@ -69,7 +70,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
       toast.error(body.error ?? "No se pudo ejecutar la acción.");
       return;
     }
-    toast.success("Incidencia actualizada");
+    toast.success("Ticket actualizado");
     router.refresh();
   }
 
@@ -151,6 +152,22 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           </Badge>
         ))}
       </div>
+
+      {/* Lifecycle timeline */}
+      <Card className="rounded-2xl">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold text-slate-600 uppercase tracking-wide">Ciclo de vida · Tiempos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <TicketLifecycle
+            createdAt={ticket.createdAt}
+            resueltoAt={ticket.resueltoAt}
+            historial={ticket.historial}
+            horasDedicadas={ticket.horasDedicadas}
+            estado={ticket.estado}
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-4">

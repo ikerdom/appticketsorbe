@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentPageUser } from "@/lib/data";
 import { AdminDashboardView } from "@/components/tickets/admin-dashboard-view";
+import { calcTicketTiming } from "@/lib/ticket-timing";
 
 export default async function AdminDashboardPage({
   searchParams
@@ -50,7 +51,13 @@ export default async function AdminDashboardPage({
         orderBy: { _count: { categoriaCustom: "desc" } },
         take: 5
       }),
-      prisma.ticket.findMany({ where: { archivadoAt: null, resueltoAt: { not: null } }, include: { empresaOrigen: true } }),
+      prisma.ticket.findMany({
+        where: { archivadoAt: null, resueltoAt: { not: null }, createdAt: { gte: from } },
+        include: {
+          empresaOrigen: true,
+          historial: { select: { accion: true, detalle: true, createdAt: true }, orderBy: { createdAt: "asc" } }
+        }
+      }),
       prisma.ticket.findMany({
         where: {
           archivadoAt: null,
@@ -112,6 +119,17 @@ export default async function AdminDashboardPage({
     horas: values.reduce((a, b) => a + b, 0) / values.length
   }));
 
+  // Timing stats from historial
+  const timingResults = resueltos.map((t) => calcTicketTiming(t.createdAt, t.resueltoAt, t.historial));
+  const withRespuesta = timingResults.filter((r) => r.respuestaHoras !== null);
+  const avgRespuestaHoras = withRespuesta.length > 0
+    ? withRespuesta.reduce((acc, r) => acc + r.respuestaHoras!, 0) / withRespuesta.length
+    : null;
+  const avgResolucionHoras = resueltos.length > 0 ? avgGlobalHoras : null;
+  const slaOkCount = timingResults.filter((r) => r.slaOk === true).length;
+  const slaBreachCount = timingResults.filter((r) => r.slaOk === false).length;
+  const slaOkPct = resueltos.length > 0 ? (slaOkCount / resueltos.length) * 100 : null;
+
   const priority = prioridadGroup.map((item) => ({ prioridad: item.prioridad, total: item._count.prioridad }));
 
   const topCategorias = [
@@ -162,6 +180,7 @@ export default async function AdminDashboardPage({
           })),
           avgGlobalHoras,
           avgPorEmpresa,
+          timingStats: { avgRespuestaHoras, avgResolucionHoras, slaOkPct, slaBreachCount },
           exportQuery,
           empresas,
           range

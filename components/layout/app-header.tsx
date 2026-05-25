@@ -74,10 +74,7 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
             <NotificationBell />
           </div>
           <Link href="/tareas" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
-            Tickets
-          </Link>
-          <Link href={isAdmin ? "/admin/propuestas" : "/propuestas"} className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
-            Propuestas
+            Tickets internos
           </Link>
           <Link
             href="/bienvenida"
@@ -114,9 +111,6 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/admin/dashboard">
                     Dashboard
                   </Link>
-                  <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/admin/propuestas">
-                    Propuestas
-                  </Link>
                 </div>
               ) : null}
             </div>
@@ -141,10 +135,7 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   Perfil
                 </Link>
                 <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white md:hidden" href="/tareas">
-                  Tickets
-                </Link>
-                <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white md:hidden" href={isAdmin ? "/admin/propuestas" : "/propuestas"}>
-                  Propuestas
+                  Tickets internos
                 </Link>
                 {isAdmin ? (
                   <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/historico">

@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertCircle, BarChart3, Clock3, Download, Layers3 } from "lucide-react";
+import { AlertCircle, BarChart3, Clock3, Download, Layers3, Timer, Zap, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDateTimeEs } from "@/lib/dates";
+import { formatHoras } from "@/lib/ticket-timing";
 
 interface MetricData {
   estado: { ABIERTO: number; EN_CURSO: number; RESUELTO: number };
@@ -28,6 +29,12 @@ interface MetricData {
   exportQuery: string;
   empresas: { id: string; nombre: string }[];
   range: 30 | 90;
+  timingStats?: {
+    avgRespuestaHoras: number | null;
+    avgResolucionHoras: number | null;
+    slaOkPct: number | null;
+    slaBreachCount: number;
+  };
 }
 
 const PRIORIDAD_COLORS: Record<string, string> = {
@@ -63,6 +70,45 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
         <Card className="rounded-2xl"><CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-amber-600" />En curso</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-amber-600">{data.estado.EN_CURSO}</p><p className="text-xs text-muted-foreground">{data.comparePct.EN_CURSO >= 0 ? "+" : ""}{data.comparePct.EN_CURSO}% vs periodo previo</p></CardContent></Card>
         <Card className="rounded-2xl"><CardHeader><CardTitle className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-emerald-600" />Resueltos</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-emerald-600">{data.estado.RESUELTO}</p><p className="text-xs text-muted-foreground">{data.comparePct.RESUELTO >= 0 ? "+" : ""}{data.comparePct.RESUELTO}% vs periodo previo</p></CardContent></Card>
       </div>
+
+      {/* Timing stats */}
+      {data.timingStats && (
+        <div>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Tiempos · SLA</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-amber-500" />1ª respuesta media</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-amber-600">{formatHoras(data.timingStats.avgRespuestaHoras)}</p>
+                <p className="text-xs text-muted-foreground">Tiempo hasta primer EN_CURSO</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Timer className="h-4 w-4 text-indigo-500" />Resolución media</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-indigo-600">{formatHoras(data.timingStats.avgResolucionHoras)}</p>
+                <p className="text-xs text-muted-foreground">Apertura → resolución</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><ShieldCheck className="h-4 w-4 text-emerald-500" />SLA cumplido</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {data.timingStats.slaOkPct !== null ? `${Math.round(data.timingStats.slaOkPct)}%` : "—"}
+                </p>
+                <p className="text-xs text-muted-foreground">Resueltos en &lt;72h</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4 text-red-500" />SLA incumplido</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-red-600">{data.timingStats.slaBreachCount}</p>
+                <p className="text-xs text-muted-foreground">Resueltos en +72h</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="rounded-2xl">

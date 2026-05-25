@@ -6,14 +6,14 @@ import { UserPortal } from "@/components/portal/user-portal";
 import { ticketUnreadMap } from "@/lib/lecturas";
 
 export const metadata: Metadata = {
-  title: "Incidencia"
+  title: "Tickets"
 };
 
 export default async function DashboardPage() {
   const user = await requireCurrentPageUser();
   const isAdmin = user.rol === "ADMIN";
 
-  const [tickets, empresas, usuarios, tareas, propuestas, totalTicketsAdmin, totalPropuestasAdmin] = await Promise.all([
+  const [tickets, empresas, usuarios, tareas, totalTicketsAdmin] = await Promise.all([
     prisma.ticket.findMany({
       where: visibleTicketWhere(user),
       include: {
@@ -36,7 +36,7 @@ export default async function DashboardPage() {
       where: { activo: true, ...(isAdmin ? {} : { empresaId: user.empresaId }) },
       orderBy: { email: "asc" }
     }),
-    // tareas sólo para usuarios normales (admin tiene su propia página)
+    // tareas sólo para usuarios normales
     isAdmin ? [] : prisma.tarea.findMany({
       where: { empresaId: user.empresaId },
       include: {
@@ -46,15 +46,7 @@ export default async function DashboardPage() {
       },
       orderBy: { updatedAt: "desc" }
     }),
-    // propuestas del usuario
-    isAdmin ? [] : prisma.propuesta.findMany({
-      where: { userId: user.id },
-      include: { empresa: { select: { id: true, nombre: true, color: true } } },
-      orderBy: { createdAt: "desc" }
-    }),
-    // counts para admin
-    isAdmin ? prisma.tarea.count({ where: { estado: { not: "HECHO" } } }) : 0,
-    isAdmin ? prisma.propuesta.count() : 0
+    isAdmin ? prisma.tarea.count({ where: { estado: { not: "HECHO" } } }) : 0
   ]);
 
   const unread = await ticketUnreadMap(
@@ -81,7 +73,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Panel de incidencias</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Panel de tickets</h1>
           <p className="text-sm text-slate-500">Vista de administrador · todas las empresas</p>
         </div>
         <AdminEmpresasPanel
@@ -92,7 +84,6 @@ export default async function DashboardPage() {
           currentUserId={user.id}
           currentUserEmpresaId={user.empresaId}
           totalTickets={totalTicketsAdmin}
-          totalPropuestas={totalPropuestasAdmin}
         />
       </div>
     );
@@ -109,7 +100,7 @@ export default async function DashboardPage() {
       <UserPortal
         tickets={ticketsWithUnread}
         tareas={tareas}
-        propuestas={propuestas}
+        propuestas={[]}
         currentUserId={user.id}
         usuarios={usuarios}
         autorNombre={user.nombre ?? user.name ?? user.email ?? ""}

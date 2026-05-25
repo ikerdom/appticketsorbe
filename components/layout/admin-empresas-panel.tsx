@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Plus, Ticket, CheckSquare, Lightbulb, BarChart2, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Ticket, CheckSquare, BarChart2, ChevronRight } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import type { TicketCardData } from "@/types/ticket";
 
@@ -24,7 +24,6 @@ interface Props {
   currentUserId: string;
   currentUserEmpresaId: string;
   totalTickets?: number;
-  totalPropuestas?: number;
 }
 
 type Section = "incidencias" | null;
@@ -36,8 +35,7 @@ export function AdminEmpresasPanel({
   usuarios,
   currentUserId,
   currentUserEmpresaId,
-  totalTickets = 0,
-  totalPropuestas = 0
+  totalTickets = 0
 }: Props) {
   const [showKanban, setShowKanban] = useState(false);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
@@ -53,14 +51,14 @@ export function AdminEmpresasPanel({
     {
       id: "incidencias" as const,
       icon: <Ticket className="h-6 w-6" />,
-      label: "Incidencias",
+      label: "Tickets",
       main: totalIncActivas,
-      mainLabel: totalIncActivas === 1 ? "activa" : "activas",
+      mainLabel: totalIncActivas === 1 ? "activo" : "activos",
       sub: totalSinLeer > 0 ? `${totalSinLeer} sin leer` : "Todo al día",
       gradient: "from-indigo-500 to-indigo-600",
       border: "border-indigo-200",
       iconBg: "bg-indigo-100 text-indigo-600",
-      action: "Nueva incidencia",
+      action: "Nuevo ticket",
       actionHref: "/tickets/nuevo"
     },
     {
@@ -73,28 +71,15 @@ export function AdminEmpresasPanel({
       gradient: "from-amber-500 to-orange-500",
       border: "border-amber-200",
       iconBg: "bg-amber-100 text-amber-600",
-      action: "Ver tickets",
+      action: "Ver tickets internos",
       actionHref: "/tareas"
-    },
-    {
-      id: null,
-      icon: <Lightbulb className="h-6 w-6" />,
-      label: "Propuestas",
-      main: totalPropuestas,
-      mainLabel: totalPropuestas === 1 ? "recibida" : "recibidas",
-      sub: "Revisar y gestionar",
-      gradient: "from-emerald-500 to-teal-500",
-      border: "border-emerald-200",
-      iconBg: "bg-emerald-100 text-emerald-600",
-      action: "Gestionar propuestas",
-      actionHref: "/admin/propuestas"
     }
   ];
 
   return (
     <div className="space-y-6">
       {/* 3 big cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {bigCards.map((card, i) => {
           const active = card.id !== null && section === card.id;
           const isClickable = card.id !== null;
@@ -146,7 +131,7 @@ export function AdminEmpresasPanel({
         })}
       </div>
 
-      {/* Incidencias detail: company cards + kanban */}
+      {/* Tickets detail: company cards + kanban */}
       {section === "incidencias" && (
         <div className="space-y-4">
           {/* Mini stats */}
