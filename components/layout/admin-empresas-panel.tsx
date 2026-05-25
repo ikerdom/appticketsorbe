@@ -226,6 +226,15 @@ export function AdminEmpresasPanel({
             />
           )}
 
+          {/* Live room link */}
+          <Link
+            href="/admin/live"
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 shadow-sm hover:bg-red-100 transition"
+          >
+            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+            🔴 Sala de operaciones (live)
+          </Link>
+
           {/* Dashboard link */}
           <Link
             href="/admin/dashboard"
