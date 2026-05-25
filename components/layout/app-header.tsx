@@ -56,7 +56,7 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 shadow-md shadow-indigo-500/30 transition group-hover:bg-indigo-400">
               <Zap className="h-4 w-4 text-white" />
             </div>
-            <span className="text-base font-bold tracking-tight text-white">Incidencia</span>
+            <span className="text-base font-bold tracking-tight text-white">Tickets</span>
           </Link>
           <span
             className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold text-white shadow-sm"

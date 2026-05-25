@@ -111,15 +111,15 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "No se pudo crear la incidencia" }));
-        const message = body.error ?? "No se pudo crear la incidencia";
+        const body = await response.json().catch(() => ({ error: "No se pudo crear el ticket" }));
+        const message = body.error ?? "No se pudo crear el ticket";
         setError(message);
         toast.error(message);
         return;
       }
 
       const { ticket } = await response.json();
-      toast.success("Incidencia creada correctamente");
+      toast.success("Ticket creado correctamente");
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
     });
@@ -131,7 +131,7 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
         <X className="h-4 w-4" />
       </Link>
       <CardHeader>
-        <CardTitle className="text-2xl font-semibold">Crear incidencia</CardTitle>
+        <CardTitle className="text-2xl font-semibold">Crear ticket</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-6">
@@ -191,7 +191,7 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
                 Persona o recurso afectado
               </CardTitle>
               <p className="text-xs text-muted-foreground">
-                Indica a quién o qué afecta la incidencia: una persona, un equipo, una URL, una impresora, etc.
+                Indica a quién o qué afecta el ticket: una persona, un equipo, una URL, una impresora, etc.
               </p>
             </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
@@ -259,7 +259,7 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
 
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={isPending} className="rounded-xl px-6">
-              {isPending ? "Creando incidencia..." : "Crear incidencia"}
+              {isPending ? "Creando ticket..." : "Crear ticket"}
             </Button>
             <Button type="button" variant="outline" onClick={() => router.push("/")}>
               Cancelar

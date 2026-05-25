@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { DndContext, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -65,7 +65,7 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
       <div ref={setNodeRef} className={`min-h-[240px] space-y-2 rounded-xl p-2 ${s.dropzone}`}>
         {count === 0 ? (
           <div className="rounded-lg border border-dashed border-current/20 p-6 text-center text-xs text-muted-foreground opacity-60">
-            Sin incidencias
+            Sin tickets
           </div>
         ) : null}
         {children}
@@ -81,6 +81,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const isFirstRender = useRef(true);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const [filters, setFilters] = useState({
@@ -93,6 +94,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     if (initialEmpresaFilter === undefined) return;
     const next = { empresaDestinoId: initialEmpresaFilter, prioridad: "", categoria: "" };
     setFilters(next);
+    // On first mount, use SSR data (initialTickets) — no refetch needed.
+    // Only refetch when the filter actually changes after mount.
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     startTransition(() => { void refreshWithFilters(next); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEmpresaFilter]);
@@ -185,18 +192,18 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     const isCreator = fromTicket.creadorId === currentUserId;
     const canEditTicket = isAdmin || isCreator || fromTicket.empresaOrigenId === currentUserEmpresaId || fromTicket.destinos.some((d) => d.empresaId === currentUserEmpresaId);
     if (!canEditTicket) {
-      toast.error("Solo lectura: no puedes mover incidencias de otra empresa.");
+      toast.error("Solo lectura: no puedes mover tickets de otra empresa.");
       return;
     }
     if (!isAdmin && !isCreator && fromTicket.asignadoId && fromTicket.asignadoId !== currentUserId && !canTakeByDrag) {
-      toast.error("Solo quien la está gestionando puede mover esta incidencia.");
+      toast.error("Solo quien la está gestionando puede mover este ticket.");
       return;
     }
 
     if (targetEstado === fromTicket.estado) return;
 
     if (targetEstado === "RESUELTO") {
-      const ok = window.confirm("¿Confirmas marcar esta incidencia como resuelta?");
+      const ok = window.confirm("¿Confirmas marcar este ticket como resuelto?");
       if (!ok) return;
     }
 
@@ -220,12 +227,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
     if (!response.ok) {
       setTickets(previous);
-      const body = await response.json().catch(() => ({ error: "No se pudo mover la incidencia" }));
-      toast.error(body.error ?? "No se pudo mover la incidencia");
+      const body = await response.json().catch(() => ({ error: "No se pudo mover el ticket" }));
+      toast.error(body.error ?? "No se pudo mover el ticket");
       return;
     }
 
-    toast.success("Incidencia actualizada");
+    toast.success("Ticket actualizado");
     await refreshWithFilters();
   }
 
@@ -244,7 +251,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
         <div className="grid gap-2.5 md:grid-cols-3">
           <Select value={filters.empresaDestinoId} onChange={(e) => updateFilter("empresaDestinoId", e.target.value)}>
-            <option value="">{isAdmin ? "Todas (empresa afectada)" : "Todas mis incidencias"}</option>
+            <option value="">{isAdmin ? "Todas las empresas" : "Todos mis tickets"}</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>
                 {empresa.nombre}
@@ -296,11 +303,11 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
       {visibleTickets.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
-          <p className="mb-1 text-sm font-medium text-slate-600">Sin incidencias con estos filtros</p>
-          <p className="mb-4 text-xs text-slate-400">Prueba a cambiar los filtros o crea una nueva</p>
+          <p className="mb-1 text-sm font-medium text-slate-600">Sin tickets con estos filtros</p>
+          <p className="mb-4 text-xs text-slate-400">Prueba a cambiar los filtros o crea un nuevo ticket</p>
           <Link href="/tickets/nuevo" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">
             <Plus className="h-4 w-4" />
-            Crear incidencia
+            Nuevo ticket
           </Link>
         </div>
       ) : null}
@@ -344,7 +351,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       ) : null}
 
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
-        <div className="hidden gap-4 md:grid md:grid-cols-3" role="list" aria-label="Kanban de incidencias">
+        <div className="hidden gap-4 md:grid md:grid-cols-3" role="list" aria-label="Kanban de tickets">
           {(Object.keys(grouped) as Estado[]).map((estado) => {
             const { mine, others } = groupedSplit[estado];
             const all = grouped[estado];

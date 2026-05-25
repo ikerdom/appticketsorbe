@@ -463,7 +463,7 @@ export function AdminLiveRoom({ initialTickets, initialStats, usuarios, empresas
         <div className="rounded-xl border border-dashed bg-white p-16 text-center shadow-sm">
           <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-300" />
           <p className="text-sm font-semibold text-slate-600">
-            {tickets.length === 0 ? "No hay incidencias activas" : "No hay resultados con estos filtros"}
+            {tickets.length === 0 ? "No hay tickets activos" : "No hay resultados con estos filtros"}
           </p>
           <p className="mt-1 text-xs text-slate-400">
             {tickets.length === 0
@@ -513,7 +513,7 @@ export function AdminLiveRoom({ initialTickets, initialStats, usuarios, empresas
             <div className="flex items-center gap-2 border-t bg-red-50 px-4 py-2.5">
               <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
               <span className="text-xs text-red-600 font-medium">
-                {stats.criticos} incidencia{stats.criticos !== 1 ? "s" : ""} crítica{stats.criticos !== 1 ? "s" : ""} — requieren atención inmediata
+                {stats.criticos} ticket{stats.criticos !== 1 ? "s" : ""} crítico{stats.criticos !== 1 ? "s" : ""} — requieren atención inmediata
               </span>
             </div>
           )}

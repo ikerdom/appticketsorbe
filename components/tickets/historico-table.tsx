@@ -60,7 +60,7 @@ export function HistoricoTable({ items }: { items: HistoricoItem[] }) {
                     size="sm"
                     disabled={isPending}
                     onClick={() => {
-                      if (!confirm("¿Reabrir esta incidencia y pasarla a En curso?")) return;
+                      if (!confirm("¿Reabrir este ticket y pasarlo a En curso?")) return;
                       startTransition(async () => {
                         const response = await fetch(`/api/tickets/${ticket.id}/estado`, {
                           method: "PATCH",
@@ -68,10 +68,10 @@ export function HistoricoTable({ items }: { items: HistoricoItem[] }) {
                           body: JSON.stringify({ action: "set_estado", estado: "EN_CURSO" })
                         });
                         if (!response.ok) {
-                          toast.error("No se pudo reabrir la incidencia.");
+                          toast.error("No se pudo reabrir el ticket.");
                           return;
                         }
-                        toast.success("Incidencia reabierta.");
+                        toast.success("Ticket reabierto.");
                         router.refresh();
                       });
                     }}

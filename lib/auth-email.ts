@@ -9,6 +9,7 @@ export const CORPORATE_DOMAINS = [
 export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com"] as const;
 
 const LEGACY_TO_ACTIVE_DOMAIN: Record<string, string> = {
+  "bn-tic.es": "orbe.es",
   "orbeformacion.com": "orbe.es",
   "entenova-gnosis.com": "entenova.gnosis.com"
 };

@@ -299,13 +299,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
               {ticket.estado !== "EN_CURSO" ? (
                 <Button className="w-full" onClick={() => void performAction("take")}>
-                  Coger esta incidencia
+                  Tomar este ticket
                 </Button>
               ) : null}
 
               {canResolve ? (
                 <div className="space-y-2 rounded-lg border border-dashed p-3">
-                  <p className="text-xs font-semibold text-slate-600">Resolver incidencia</p>
+                  <p className="text-xs font-semibold text-slate-600">Resolver ticket</p>
                   <div className="space-y-1">
                     <label className="text-xs text-muted-foreground">¿Cómo se resolvió? (opcional)</label>
                     <Textarea
@@ -341,7 +341,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   variant="outline"
                   className="w-full"
                   onClick={() => {
-                    if (!confirm("¿Seguro que quieres archivar esta incidencia?")) return;
+                    if (!confirm("¿Seguro que quieres archivar este ticket?")) return;
                     void performAction("archive");
                   }}
                 >
