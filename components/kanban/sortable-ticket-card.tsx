@@ -10,6 +10,15 @@ import { formatRelativeEs } from "@/lib/dates";
 import type { TicketCardData } from "@/types/ticket";
 import type { Prioridad } from "@prisma/client";
 
+/** Returns SLA status based on ticket age in hours */
+function getSlaStatus(createdAt: Date, estado: string): { label: string; color: string; ring: string } | null {
+  if (estado === "RESUELTO") return null;
+  const hours = (Date.now() - new Date(createdAt).getTime()) / 3600000;
+  if (hours < 24) return { label: `${Math.round(hours)}h`, color: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-200" };
+  if (hours < 72) return { label: `${Math.floor(hours / 24)}d`, color: "bg-amber-100 text-amber-700", ring: "ring-amber-200" };
+  return { label: `${Math.floor(hours / 24)}d ⚠`, color: "bg-red-100 text-red-700", ring: "ring-red-200" };
+}
+
 const PRIORIDAD_DOT: Record<Prioridad, string> = {
   CRITICA: "bg-red-500",
   ALTA: "bg-orange-500",
@@ -42,6 +51,7 @@ export function SortableTicketCard({ ticket }: { ticket: TicketCardData }) {
   const destinos = ticket.destinos.filter((dest) => !dest.empresa.isGlobalTarget);
   const principal = destinos[0]?.empresa ?? ticket.empresaDestino;
   const categoria = ticket.categoriaCustom || ticket.categoria;
+  const sla = getSlaStatus(ticket.createdAt, ticket.estado);
 
   return (
     <Card
@@ -54,10 +64,20 @@ export function SortableTicketCard({ ticket }: { ticket: TicketCardData }) {
       aria-label={`Ticket ${ticket.numero}`}
     >
       <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span className="font-mono text-[10px] font-bold text-slate-400">
-          #{String(ticket.numero).padStart(4, "0")}
-        </span>
         <div className="flex items-center gap-1.5">
+          {ticket.unread && (
+            <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" title="Sin leer" />
+          )}
+          <span className="font-mono text-[10px] font-bold text-slate-400">
+            #{String(ticket.numero).padStart(4, "0")}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {sla && (
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ${sla.color} ${sla.ring}`}>
+              {sla.label}
+            </span>
+          )}
           <div className={`h-2 w-2 rounded-full ${PRIORIDAD_DOT[ticket.prioridad]}`} title={PRIORIDAD_LABELS[ticket.prioridad]} />
           <span className={`text-[11px] font-semibold ${PRIORIDAD_TEXT[ticket.prioridad]}`}>
             {PRIORIDAD_LABELS[ticket.prioridad]}
@@ -66,7 +86,7 @@ export function SortableTicketCard({ ticket }: { ticket: TicketCardData }) {
       </div>
 
       <Link href={`/tickets/${ticket.id}`} className="block mb-3">
-        <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-800 hover:text-indigo-600">
+        <p className={`line-clamp-2 text-sm font-semibold leading-snug hover:text-indigo-600 ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
           {ticket.titulo}
         </p>
       </Link>

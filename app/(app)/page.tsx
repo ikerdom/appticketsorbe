@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   const user = await requireCurrentPageUser();
   const isAdmin = user.rol === "ADMIN";
 
-  const [tickets, empresas, usuarios, tareas, propuestas] = await Promise.all([
+  const [tickets, empresas, usuarios, tareas, propuestas, totalTicketsAdmin, totalPropuestasAdmin] = await Promise.all([
     prisma.ticket.findMany({
       where: visibleTicketWhere(user),
       include: {
@@ -51,7 +51,10 @@ export default async function DashboardPage() {
       where: { userId: user.id },
       include: { empresa: { select: { id: true, nombre: true, color: true } } },
       orderBy: { createdAt: "desc" }
-    })
+    }),
+    // counts para admin
+    isAdmin ? prisma.tarea.count({ where: { estado: { not: "HECHO" } } }) : 0,
+    isAdmin ? prisma.propuesta.count() : 0
   ]);
 
   const unread = await ticketUnreadMap(
@@ -88,6 +91,8 @@ export default async function DashboardPage() {
           usuarios={usuarios}
           currentUserId={user.id}
           currentUserEmpresaId={user.empresaId}
+          totalTickets={totalTicketsAdmin}
+          totalPropuestas={totalPropuestasAdmin}
         />
       </div>
     );
