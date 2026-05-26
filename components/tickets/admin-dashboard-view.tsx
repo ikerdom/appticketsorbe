@@ -107,7 +107,7 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
               <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4 text-emerald-600" />Soluciones documentadas</CardTitle></CardHeader>
               <CardContent>
                 <p className="text-2xl font-bold text-emerald-700">{data.timingStats.conSolucionCount} <span className="text-base font-medium text-emerald-500">({data.timingStats.conSolucionPct}%)</span></p>
-                <p className="text-xs text-muted-foreground">Tickets resueltos con "cómo se resolvió" escrito · Base de conocimiento</p>
+                <p className="text-xs text-muted-foreground">Tickets resueltos con &quot;cómo se resolvió&quot; escrito · Base de conocimiento</p>
               </CardContent>
             </Card>
             <Card className="rounded-2xl border-red-100 bg-red-50/40">
