@@ -68,7 +68,7 @@ export default async function DashboardPage() {
         resueltos: propios.filter((t) => t.estado === "RESUELTO").length,
         total: propios.length
       };
-    }).filter((e) => e.total > 0);
+    });
 
     return (
       <div className="space-y-5">

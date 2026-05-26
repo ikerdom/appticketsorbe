@@ -4,12 +4,12 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   Plus, AlertCircle, Clock, CheckCircle2,
-  MessageSquare, ChevronRight, Ticket, CheckSquare
+  MessageSquare, ChevronRight, StickyNote
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
 import { TareasBoard } from "@/components/tareas/tareas-board";
 
-type Section = "tickets" | "internos" | null;
+type Section = "internos" | null;
 
 type TicketEstado = "ABIERTO" | "EN_CURSO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
@@ -48,7 +48,7 @@ interface PortalTarea {
 interface UserPortalProps {
   tickets: PortalTicket[];
   tareas: PortalTarea[];
-  propuestas: unknown[]; // kept for prop compat, not used
+  propuestas: unknown[];
   currentUserId: string;
   usuarios: { id: string; email: string; nombre: string | null; name: string | null }[];
   autorNombre: string;
@@ -65,159 +65,100 @@ const PRIORIDAD_DOT: Record<Prioridad, string> = {
   BAJA:    "bg-slate-300",
   MEDIA:   "bg-blue-400",
   ALTA:    "bg-orange-400",
-  CRITICA: "bg-red-500"
+  CRITICA: "bg-red-500 animate-pulse"
 };
 
 export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPortalProps) {
   const [section, setSection] = useState<Section>(null);
+  const [showResueltos, setShowResueltos] = useState(false);
 
-  const activos    = tickets.filter(t => t.estado !== "RESUELTO").length;
+  const activos    = tickets.filter(t => t.estado !== "RESUELTO");
+  const resueltos  = tickets.filter(t => t.estado === "RESUELTO");
   const sinLeer    = tickets.filter(t => t.unread).length;
   const tareasAct  = tareas.filter(t => t.estado !== "HECHO").length;
-  const tareasEnCurso = tareas.filter(t => t.estado === "EN_CURSO").length;
-
-  const cards: {
-    id: Section;
-    icon: React.ReactNode;
-    label: string;
-    main: number;
-    mainLabel: string;
-    sub: string;
-    gradient: string;
-    border: string;
-    iconBg: string;
-    action?: string;
-    actionHref?: string;
-  }[] = [
-    {
-      id: "tickets",
-      icon: <Ticket className="h-6 w-6" />,
-      label: "Tickets",
-      main: activos,
-      mainLabel: activos === 1 ? "activo" : "activos",
-      sub: sinLeer > 0 ? `${sinLeer} sin leer` : "Todo al día",
-      gradient: "from-indigo-500 to-indigo-600",
-      border: "border-indigo-200",
-      iconBg: "bg-indigo-100 text-indigo-600",
-      action: "Nuevo ticket",
-      actionHref: "/tickets/nuevo"
-    },
-    {
-      id: "internos",
-      icon: <CheckSquare className="h-6 w-6" />,
-      label: "Notas internas",
-      main: tareasAct,
-      mainLabel: tareasAct === 1 ? "activa" : "activas",
-      sub: tareasEnCurso > 0 ? `${tareasEnCurso} en curso` : "Solo visibles para ti",
-      gradient: "from-amber-500 to-orange-500",
-      border: "border-amber-200",
-      iconBg: "bg-amber-100 text-amber-600",
-    }
-  ];
 
   return (
-    <div className="space-y-8">
-      {/* Cards nav */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {cards.map(card => {
-          const active = section === card.id;
-          return (
-            <div key={card.id} className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => setSection(active ? null : card.id)}
-                className={`group relative overflow-hidden rounded-2xl border-2 bg-white p-5 text-left shadow-sm transition-all hover:shadow-lg ${
-                  active ? `${card.border} shadow-md` : "border-slate-100 hover:border-slate-200"
-                }`}
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconBg}`}>
-                    {card.icon}
-                  </div>
-                  {active && (
-                    <span className={`rounded-full bg-gradient-to-r ${card.gradient} px-2.5 py-0.5 text-[11px] font-bold text-white`}>
-                      Abierto
-                    </span>
-                  )}
-                </div>
-                <p className={`text-4xl font-extrabold tracking-tight bg-gradient-to-r ${card.gradient} bg-clip-text text-transparent`}>
-                  {card.main}
-                </p>
-                <p className="text-sm font-semibold text-slate-700">{card.mainLabel} · {card.label}</p>
-                <p className="mt-1 text-xs text-slate-400">{card.sub}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition">
-                  <span>{active ? "Cerrar" : "Ver"} {card.label.toLowerCase()}</span>
-                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${active ? "rotate-90" : ""}`} />
-                </div>
-              </button>
+    <div className="space-y-4">
 
-              {card.actionHref && (
-                <Link
-                  href={card.actionHref}
-                  className={`mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r ${card.gradient} px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition`}
-                >
-                  <Plus className="h-4 w-4" />
-                  {card.action}
-                </Link>
-              )}
-            </div>
-          );
-        })}
+      {/* Cabecera tickets + botón nuevo */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-bold text-slate-700">Mis tickets</span>
+          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-700">
+            {activos.length} activos
+          </span>
+          {sinLeer > 0 && (
+            <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
+              {sinLeer} sin leer
+            </span>
+          )}
+        </div>
+        <Link
+          href="/tickets/nuevo"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo ticket
+        </Link>
       </div>
 
-      {/* Section content */}
-      {section === "tickets"  && <TicketsSection tickets={tickets} />}
-      {section === "internos" && (
-        <TareasBoard
-          initialTareas={tareas}
-          isAdmin={false}
-          currentUserId={currentUserId}
-          usuarios={usuarios}
-        />
-      )}
-    </div>
-  );
-}
-
-function TicketsSection({ tickets }: { tickets: PortalTicket[] }) {
-  const [showResueltos, setShowResueltos] = useState(false);
-  const activos   = tickets.filter(t => t.estado !== "RESUELTO");
-  const resueltos = tickets.filter(t => t.estado === "RESUELTO");
-
-  return (
-    <div className="space-y-3">
-      {activos.length === 0 && resueltos.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-white p-12 text-center shadow-sm">
-          <Ticket className="mx-auto mb-3 h-8 w-8 text-slate-300" />
-          <p className="mb-1 text-sm font-medium text-slate-600">Sin tickets activos</p>
-          <p className="mb-4 text-xs text-slate-400">Crea un ticket cuando lo necesites</p>
-          <Link href="/tickets/nuevo" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-indigo-700 transition">
-            <Plus className="h-3.5 w-3.5" /> Nuevo ticket
-          </Link>
+      {/* Lista tickets activos */}
+      {activos.length === 0 ? (
+        <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
+          <p className="mb-1 text-sm font-medium text-slate-500">Sin tickets activos</p>
+          <p className="mb-4 text-xs text-slate-400">Todo al día 👌</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {activos.map(t => <TicketRow key={t.id} ticket={t} />)}
         </div>
       )}
 
+      {/* Resueltos colapsables */}
       {resueltos.length > 0 && (
         <div>
           <button
             type="button"
             onClick={() => setShowResueltos(v => !v)}
-            className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
+            className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm font-medium text-slate-500 shadow-sm hover:bg-slate-50 transition"
           >
             <span>✓ Resueltos · {resueltos.length}</span>
             <span className="text-xs text-slate-400">{showResueltos ? "Ocultar" : "Ver"}</span>
           </button>
           {showResueltos && (
-            <div className="mt-2 space-y-2">
+            <div className="mt-1.5 space-y-1.5">
               {resueltos.map(t => <TicketRow key={t.id} ticket={t} />)}
             </div>
           )}
         </div>
       )}
+
+      {/* Notas internas — discreta, al final */}
+      <div className="border-t pt-3">
+        <button
+          type="button"
+          onClick={() => setSection(section === "internos" ? null : "internos")}
+          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+        >
+          <StickyNote className="h-3.5 w-3.5" />
+          <span>Notas internas</span>
+          {tareasAct > 0 && (
+            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">{tareasAct}</span>
+          )}
+          <ChevronRight className={`ml-auto h-3.5 w-3.5 transition-transform ${section === "internos" ? "rotate-90" : ""}`} />
+        </button>
+
+        {section === "internos" && (
+          <div className="mt-3">
+            <TareasBoard
+              initialTareas={tareas}
+              isAdmin={false}
+              currentUserId={currentUserId}
+              usuarios={usuarios}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

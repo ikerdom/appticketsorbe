@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, Plus, Ticket, CheckSquare, BarChart2, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Ticket, BarChart2, StickyNote, ChevronRight } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
 import type { TicketCardData } from "@/types/ticket";
 
@@ -26,8 +26,6 @@ interface Props {
   totalTickets?: number;
 }
 
-type Section = "incidencias" | null;
-
 export function AdminEmpresasPanel({
   empresas,
   allTickets,
@@ -37,169 +35,142 @@ export function AdminEmpresasPanel({
   currentUserEmpresaId,
   totalTickets = 0
 }: Props) {
-  const [showKanban, setShowKanban] = useState(false);
+  const [showKanban, setShowKanban] = useState(true);
   const [selectedEmpresaId, setSelectedEmpresaId] = useState<string | null>(null);
-  const [section, setSection] = useState<Section>(null);
 
   const totalAbiertos = empresas.reduce((s, e) => s + e.abiertos, 0);
   const totalEnCurso = empresas.reduce((s, e) => s + e.enCurso, 0);
   const totalResueltos = empresas.reduce((s, e) => s + e.resueltos, 0);
   const totalSinLeer = allTickets.filter((t) => t.unread).length;
-  const totalIncActivas = totalAbiertos + totalEnCurso;
-
-  const bigCards = [
-    {
-      id: "incidencias" as const,
-      icon: <Ticket className="h-6 w-6" />,
-      label: "Tickets",
-      main: totalIncActivas,
-      mainLabel: totalIncActivas === 1 ? "activo" : "activos",
-      sub: totalSinLeer > 0 ? `${totalSinLeer} sin leer` : "Todo al día",
-      gradient: "from-indigo-500 to-indigo-600",
-      border: "border-indigo-200",
-      iconBg: "bg-indigo-100 text-indigo-600",
-      action: "Nuevo ticket",
-      actionHref: "/tickets/nuevo"
-    },
-    {
-      id: null,
-      icon: <CheckSquare className="h-6 w-6" />,
-      label: "Notas internas",
-      main: totalTickets,
-      mainLabel: totalTickets === 1 ? "activa" : "activas",
-      sub: "Solo visibles para ti",
-      gradient: "from-amber-500 to-orange-500",
-      border: "border-amber-200",
-      iconBg: "bg-amber-100 text-amber-600",
-      action: "Ver mis notas",
-      actionHref: "/tareas"
-    }
-  ];
+  const totalActivos = totalAbiertos + totalEnCurso;
 
   return (
-    <div className="space-y-6">
-      {/* 3 big cards */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {bigCards.map((card, i) => {
-          const active = card.id !== null && section === card.id;
-          const isClickable = card.id !== null;
-          return (
-            <div key={i} className="flex flex-col">
-              <button
-                type="button"
-                onClick={() => {
-                  if (card.id !== null) {
-                    setSection(active ? null : card.id);
-                    if (card.id === "incidencias") setShowKanban(!active);
-                  }
-                }}
-                className={`group relative overflow-hidden rounded-2xl border-2 bg-white p-5 text-left shadow-sm transition-all hover:shadow-lg ${
-                  active ? `${card.border} shadow-md` : "border-slate-100 hover:border-slate-200"
-                }`}
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${card.iconBg}`}>
-                    {card.icon}
-                  </div>
-                  {active && (
-                    <span className={`rounded-full bg-gradient-to-r ${card.gradient} px-2.5 py-0.5 text-[11px] font-bold text-white`}>
-                      Abierto
-                    </span>
-                  )}
-                </div>
-                <p className={`text-4xl font-extrabold tracking-tight bg-gradient-to-r ${card.gradient} bg-clip-text text-transparent`}>
-                  {card.main}
-                </p>
-                <p className="text-sm font-semibold text-slate-700">{card.mainLabel} · {card.label}</p>
-                <p className="mt-1 text-xs text-slate-400">{card.sub}</p>
-                <div className="mt-4 flex items-center gap-1 text-xs font-medium text-slate-400 group-hover:text-slate-600 transition">
-                  <span>{isClickable ? (active ? "Cerrar" : "Ver") : "Ir a"} {card.label.toLowerCase()}</span>
-                  <ChevronRight className={`h-3.5 w-3.5 transition-transform ${active ? "rotate-90" : ""}`} />
-                </div>
-              </button>
+    <div className="space-y-4">
 
-              {/* Action link */}
-              <Link
-                href={card.actionHref}
-                className={`mt-2 flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r ${card.gradient} px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-90 transition`}
-              >
-                <Plus className="h-4 w-4" />
-                {card.action}
-              </Link>
-            </div>
-          );
-        })}
+      {/* Fila superior: métricas + acciones rápidas */}
+      <div className="flex flex-wrap items-center gap-3">
+        {/* Stats chips */}
+        <div className="flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 shadow-sm">
+          <Ticket className="h-4 w-4 text-indigo-500" />
+          <span className="text-sm font-bold text-slate-800">{totalActivos}</span>
+          <span className="text-xs text-slate-400">activos</span>
+          {totalSinLeer > 0 && (
+            <span className="ml-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{totalSinLeer}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl border bg-red-50 px-3 py-2 text-sm">
+          <span className="font-bold text-red-600">{totalAbiertos}</span>
+          <span className="text-xs text-red-400">abiertos</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl border bg-amber-50 px-3 py-2 text-sm">
+          <span className="font-bold text-amber-600">{totalEnCurso}</span>
+          <span className="text-xs text-amber-400">en curso</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl border bg-emerald-50 px-3 py-2 text-sm">
+          <span className="font-bold text-emerald-600">{totalResueltos}</span>
+          <span className="text-xs text-emerald-400">resueltos</span>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
+
+        {/* Acciones rápidas */}
+        <Link
+          href="/tickets/nuevo"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+        >
+          <Plus className="h-4 w-4" />
+          Nuevo ticket
+        </Link>
+
+        {/* Notas internas — discreta */}
+        <Link
+          href="/tareas"
+          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition"
+        >
+          <StickyNote className="h-3.5 w-3.5" />
+          Mis notas
+          {totalTickets > 0 && (
+            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">{totalTickets}</span>
+          )}
+        </Link>
+
+        <Link
+          href="/admin/dashboard"
+          className="inline-flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition"
+        >
+          <BarChart2 className="h-3.5 w-3.5" />
+          Analytics
+        </Link>
       </div>
 
-      {/* Tickets detail: company cards + kanban */}
-      {section === "incidencias" && (
-        <div className="space-y-4">
-          {/* Mini stats */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl border bg-red-50 border-red-100 px-3 py-2.5 text-center">
-              <p className="text-xl font-bold text-red-600">{totalAbiertos}</p>
-              <p className="text-[11px] font-medium text-red-400">Abiertas</p>
-            </div>
-            <div className="rounded-xl border bg-amber-50 border-amber-100 px-3 py-2.5 text-center">
-              <p className="text-xl font-bold text-amber-600">{totalEnCurso}</p>
-              <p className="text-[11px] font-medium text-amber-400">En curso</p>
-            </div>
-            <div className="rounded-xl border bg-emerald-50 border-emerald-100 px-3 py-2.5 text-center">
-              <p className="text-xl font-bold text-emerald-600">{totalResueltos}</p>
-              <p className="text-[11px] font-medium text-emerald-400">Resueltas</p>
-            </div>
-          </div>
-
-          {/* Company cards */}
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {empresas.map((empresa) => (
-              <button
-                key={empresa.id}
-                type="button"
-                onClick={() => {
-                  setSelectedEmpresaId(empresa.id === selectedEmpresaId ? null : empresa.id);
-                  setShowKanban(true);
-                }}
-                className={`rounded-xl border bg-white p-4 text-left shadow-sm ring-1 ring-slate-900/5 transition-all hover:shadow-md ${
-                  selectedEmpresaId === empresa.id ? "ring-2 ring-indigo-400" : ""
-                }`}
-              >
-                <div className="mb-3 flex items-center gap-2">
-                  <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: empresa.color || "#64748b" }} />
-                  <span className="truncate text-sm font-semibold text-slate-800">{empresa.nombre}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-1 text-center text-xs">
-                  <div>
-                    <p className="text-xl font-bold text-red-600">{empresa.abiertos}</p>
-                    <p className="text-slate-400">Abiertos</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-amber-600">{empresa.enCurso}</p>
-                    <p className="text-slate-400">En curso</p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold text-emerald-600">{empresa.resueltos}</p>
-                    <p className="text-slate-400">Resueltos</p>
-                  </div>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Kanban toggle */}
+      {/* Cards de empresa — grid 2x2 o 4 cols */}
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {empresas.map((empresa) => (
           <button
+            key={empresa.id}
             type="button"
-            onClick={() => setShowKanban((v) => !v)}
-            className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50"
+            onClick={() => {
+              setSelectedEmpresaId(empresa.id === selectedEmpresaId ? null : empresa.id);
+              setShowKanban(true);
+            }}
+            className={`rounded-xl border bg-white p-4 text-left shadow-sm transition-all hover:shadow-md ${
+              selectedEmpresaId === empresa.id ? "ring-2 ring-indigo-400 border-indigo-200" : "hover:border-slate-300"
+            }`}
           >
-            <span>
-              {showKanban ? "Ocultar kanban" : "Ver kanban"}
-              {selectedEmpresaId ? ` · ${empresas.find((e) => e.id === selectedEmpresaId)?.nombre}` : " · todas las empresas"}
-            </span>
-            {showKanban ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+            <div className="mb-3 flex items-center gap-2">
+              <div className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: empresa.color || "#64748b" }} />
+              <span className="truncate text-sm font-semibold text-slate-800">{empresa.nombre}</span>
+              {selectedEmpresaId === empresa.id && (
+                <ChevronRight className="ml-auto h-3.5 w-3.5 text-indigo-400 rotate-90" />
+              )}
+            </div>
+            <div className="grid grid-cols-3 gap-1 text-center">
+              <div>
+                <p className="text-lg font-bold text-red-500">{empresa.abiertos}</p>
+                <p className="text-[10px] text-slate-400">Abiert.</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-amber-500">{empresa.enCurso}</p>
+                <p className="text-[10px] text-slate-400">Curso</p>
+              </div>
+              <div>
+                <p className="text-lg font-bold text-emerald-500">{empresa.resueltos}</p>
+                <p className="text-[10px] text-slate-400">Resuel.</p>
+              </div>
+            </div>
           </button>
+        ))}
+      </div>
 
-          {showKanban && (
+      {/* Kanban toggle */}
+      <div>
+        <button
+          type="button"
+          onClick={() => setShowKanban((v) => !v)}
+          className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition"
+        >
+          <span>
+            {selectedEmpresaId
+              ? `Kanban · ${empresas.find((e) => e.id === selectedEmpresaId)?.nombre}`
+              : "Kanban · todas las empresas"}
+          </span>
+          <div className="flex items-center gap-2">
+            {selectedEmpresaId && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setSelectedEmpresaId(null); }}
+                className="rounded px-2 py-0.5 text-xs text-slate-400 hover:bg-slate-100"
+              >
+                Ver todas
+              </button>
+            )}
+            {showKanban ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
+          </div>
+        </button>
+
+        {showKanban && (
+          <div className="mt-2">
             <KanbanBoard
               initialTickets={allTickets}
               empresas={empresasList}
@@ -209,18 +180,9 @@ export function AdminEmpresasPanel({
               currentUserEmpresaId={currentUserEmpresaId}
               initialEmpresaFilter={selectedEmpresaId ?? ""}
             />
-          )}
-
-          {/* Dashboard link */}
-          <Link
-            href="/admin/dashboard"
-            className="flex items-center justify-center gap-2 rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50 transition"
-          >
-            <BarChart2 className="h-4 w-4" />
-            Ver analytics completo →
-          </Link>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
