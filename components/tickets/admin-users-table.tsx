@@ -471,22 +471,20 @@ export function AdminUsersTable({
                 Cancelar
               </Button>
               <Button
-                onClick={() => {
-                  startTransition(async () => {
-                    const rol = confirmRoleUser.rol === "ADMIN" ? "USER" : "ADMIN";
-                    const response = await fetch(`/api/admin/usuarios/${confirmRoleUser.id}`, {
-                      method: "PATCH",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ rol })
-                    });
-                    if (!response.ok) {
-                      toast.error(await readError(response, "No se pudo cambiar rol"));
-                      return;
-                    }
-                    toast.success("Rol actualizado");
-                    closeAllDialogs();
-                    router.refresh();
+                onClick={async () => {
+                  const rol = confirmRoleUser.rol === "ADMIN" ? "USER" : "ADMIN";
+                  const response = await fetch(`/api/admin/usuarios/${confirmRoleUser.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ rol })
                   });
+                  if (!response.ok) {
+                    toast.error(await readError(response, "No se pudo cambiar rol"));
+                    return;
+                  }
+                  toast.success("Rol actualizado");
+                  closeAllDialogs();
+                  router.refresh();
                 }}
               >
                 Confirmar

@@ -74,16 +74,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
           return NextResponse.json({ error: "Debe haber al menos un administrador en el sistema." }, { status: 400 });
         }
       }
-
       data.rol = body.rol;
-      if (body.rol === "ADMIN") {
-        data.passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-        data.mustChangePassword = false;
-      }
-      if (body.rol === "USER") {
-        data.passwordHash = null;
-        data.mustChangePassword = false;
-      }
     }
 
     const updated = await prisma.user.update({

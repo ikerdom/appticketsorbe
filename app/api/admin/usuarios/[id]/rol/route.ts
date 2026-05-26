@@ -27,18 +27,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "No puedes quitarte tu propio rol de administrador." }, { status: 400 });
     }
 
-    const updateData: Record<string, unknown> = { rol };
-    if (rol === "ADMIN") {
-      updateData.passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
-      updateData.mustChangePassword = false;
-    } else {
-      updateData.passwordHash = null;
-      updateData.mustChangePassword = false;
-    }
-
     const usuario = await prisma.user.update({
       where: { id: params.id },
-      data: updateData
+      data: { rol }
     });
 
     return NextResponse.json({ usuario });
