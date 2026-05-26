@@ -124,10 +124,9 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       if (t.estado === "RESUELTO" && new Date(t.resueltoAt ?? t.updatedAt).getTime() < cutoff) {
         return false;
       }
-      // Empresa filter
+      // Empresa filter — solo por empresa afectada (destino), no por quien creó el ticket
       if (filters.empresaId) {
         const match =
-          t.empresaOrigenId === filters.empresaId ||
           t.empresaDestinoId === filters.empresaId ||
           t.destinos.some((d) => d.empresaId === filters.empresaId);
         if (!match) return false;

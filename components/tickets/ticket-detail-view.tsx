@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Phone, Save, Trash2, UserRound } from "lucide-react";
+import { ArrowLeft, Mail, Pencil, Phone, Save, Trash2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const [comentarios, setComentarios] = useState(ticket.comentarios);
   const [horasDedicadas, setHorasDedicadas] = useState<string>(ticket.horasDedicadas ? String(ticket.horasDedicadas) : "");
   const [notaResolucion, setNotaResolucion] = useState<string>(ticket.notaResolucion || "");
+  const [editingTicket, setEditingTicket] = useState(false);
+  const [editForm, setEditForm] = useState({
+    titulo: ticket.titulo,
+    descripcion: ticket.descripcion,
+    prioridad: ticket.prioridad as string,
+    categoria: ticket.categoria as string,
+    categoriaCustom: ticket.categoriaCustom || ""
+  });
+
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -105,6 +114,30 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
+  function saveEdicion() {
+    startTransition(async () => {
+      const response = await fetch(`/api/tickets/${ticket.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo: editForm.titulo,
+          descripcion: editForm.descripcion,
+          prioridad: editForm.prioridad || undefined,
+          categoria: editForm.categoria || undefined,
+          categoriaCustom: editForm.categoriaCustom || undefined
+        })
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: "No se pudo guardar" }));
+        toast.error(body.error ?? "No se pudo guardar");
+        return;
+      }
+      toast.success("Ticket actualizado");
+      setEditingTicket(false);
+      router.refresh();
+    });
+  }
+
   function saveContact() {
     startTransition(async () => {
       const response = await fetch(`/api/tickets/${ticket.id}/contacto`, {
@@ -128,19 +161,45 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
-        <div>
+        <div className="flex-1 min-w-0">
           <p className="text-xs font-semibold uppercase text-muted-foreground">{formatShortId(ticket)}</p>
-          <h1 className="text-2xl font-bold">{ticket.titulo}</h1>
+          {editingTicket ? (
+            <Input
+              value={editForm.titulo}
+              onChange={(e) => setEditForm(prev => ({ ...prev, titulo: e.target.value }))}
+              className="mt-1 text-xl font-bold"
+            />
+          ) : (
+            <h1 className="text-2xl font-bold">{ticket.titulo}</h1>
+          )}
         </div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-slate-100"
-          aria-label="Volver al listado"
-          title="Volver"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="text-sm">Volver al listado</span>
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {(isAdmin || ticket.creadorId === currentUserId) && (
+            editingTicket ? (
+              <div className="flex gap-1">
+                <Button size="sm" onClick={saveEdicion} disabled={isPending}>
+                  <Save className="mr-1.5 h-3.5 w-3.5" />Guardar
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setEditingTicket(false)}>
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Button size="sm" variant="outline" onClick={() => setEditingTicket(true)}>
+                <Pencil className="mr-1.5 h-3.5 w-3.5" />Editar
+              </Button>
+            )
+          )}
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 rounded-md border px-3 py-2 hover:bg-slate-100"
+            aria-label="Volver al listado"
+            title="Volver"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span className="text-sm">Volver al listado</span>
+          </Link>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -176,7 +235,56 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               <CardTitle>Descripción</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap text-sm">{ticket.descripcion}</p>
+              {editingTicket ? (
+                <div className="space-y-3">
+                  <Textarea
+                    value={editForm.descripcion}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, descripcion: e.target.value }))}
+                    rows={6}
+                    className="text-sm"
+                    placeholder="Descripción del ticket..."
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Prioridad</label>
+                      <select
+                        value={editForm.prioridad}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, prioridad: e.target.value }))}
+                        className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      >
+                        <option value="BAJA">Baja</option>
+                        <option value="MEDIA">Media</option>
+                        <option value="ALTA">Alta</option>
+                        <option value="CRITICA">Crítica</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">Categoría</label>
+                      <select
+                        value={editForm.categoria}
+                        onChange={(e) => setEditForm(prev => ({ ...prev, categoria: e.target.value }))}
+                        className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                      >
+                        <option value="TECNICO">Técnico</option>
+                        <option value="ADMINISTRATIVO">Administrativo</option>
+                        <option value="COMERCIAL">Comercial</option>
+                        <option value="RRHH">RRHH</option>
+                        <option value="OTROS">Otros</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-slate-600">Categoría personalizada (opcional)</label>
+                    <Input
+                      value={editForm.categoriaCustom}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, categoriaCustom: e.target.value }))}
+                      placeholder="Ej: Impresora, VPN, SAP..."
+                    />
+                  </div>
+                </div>
+              ) : (
+                <p className="whitespace-pre-wrap text-sm">{ticket.descripcion}</p>
+              )}
             </CardContent>
           </Card>
 

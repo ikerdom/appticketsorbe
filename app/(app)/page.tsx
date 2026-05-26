@@ -58,8 +58,9 @@ export default async function DashboardPage() {
 
   if (isAdmin) {
     const empresaStats = empresas.map((empresa) => {
+      // Solo tickets donde esta empresa es DESTINO (afectada), no donde es origen/creadora
       const propios = tickets.filter((t) =>
-        t.empresaOrigenId === empresa.id || t.destinos.some((d) => d.empresaId === empresa.id)
+        t.destinos.some((d) => d.empresaId === empresa.id)
       );
       return {
         ...empresa,
