@@ -64,14 +64,14 @@ export function AdminEmpresasPanel({
     {
       id: null,
       icon: <CheckSquare className="h-6 w-6" />,
-      label: "Tickets internos",
+      label: "Notas internas",
       main: totalTickets,
-      mainLabel: totalTickets === 1 ? "activo" : "activos",
-      sub: "Gestión interna del equipo",
+      mainLabel: totalTickets === 1 ? "activa" : "activas",
+      sub: "Solo visibles para ti",
       gradient: "from-amber-500 to-orange-500",
       border: "border-amber-200",
       iconBg: "bg-amber-100 text-amber-600",
-      action: "Ver tickets internos",
+      action: "Ver mis notas",
       actionHref: "/tareas"
     }
   ];
@@ -210,15 +210,6 @@ export function AdminEmpresasPanel({
               initialEmpresaFilter={selectedEmpresaId ?? ""}
             />
           )}
-
-          {/* Live room link */}
-          <Link
-            href="/admin/live"
-            className="flex items-center justify-center gap-2 rounded-xl border-2 border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-600 shadow-sm hover:bg-red-100 transition"
-          >
-            <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-            🔴 Sala de operaciones (live)
-          </Link>
 
           {/* Dashboard link */}
           <Link

@@ -201,12 +201,12 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
                 {form.formState.errors.contactoNombre && <p className="text-xs text-red-600">{form.formState.errors.contactoNombre.message}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="contactoTelefono">Teléfono</Label>
+                <Label htmlFor="contactoTelefono">Teléfono de contacto</Label>
                 <Input id="contactoTelefono" type="tel" {...form.register("contactoTelefono")} />
                 {form.formState.errors.contactoTelefono && <p className="text-xs text-red-600">{form.formState.errors.contactoTelefono.message}</p>}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="contactoEmail">Email</Label>
+                <Label htmlFor="contactoEmail">Email de contacto</Label>
                 <Input id="contactoEmail" type="email" {...form.register("contactoEmail")} />
                 {form.formState.errors.contactoEmail && <p className="text-xs text-red-600">{form.formState.errors.contactoEmail.message}</p>}
               </div>

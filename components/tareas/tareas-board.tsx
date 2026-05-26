@@ -99,12 +99,12 @@ function TareaCard({
   }
 
   function deleteTarea() {
-    if (!confirm("¿Eliminar este ticket?")) return;
+    if (!confirm("¿Eliminar esta nota?")) return;
     startTransition(async () => {
       const res = await fetch(`/api/tareas/${tarea.id}`, { method: "DELETE" });
       if (!res.ok) { toast.error("No se pudo eliminar"); return; }
       onDelete(tarea.id);
-      toast.success("Ticket eliminado");
+      toast.success("Nota eliminada");
     });
   }
 
@@ -159,7 +159,7 @@ function TareaCard({
                 ← Pausar
               </button>
               <button type="button" onClick={() => moveEstado("HECHO")} className="rounded-lg bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-emerald-600 transition">
-                ✓ Marcar hecha
+                ✓ Marcar hecho
               </button>
             </>
           )}
@@ -220,12 +220,13 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
           contactoTelefono: form.contactoTelefono || undefined
         })
       });
-      if (!res.ok) { toast.error("No se pudo crear la tarea"); return; }
+      if (!res.ok) { toast.error("No se pudo crear la nota"); return; }
       const { tarea } = await res.json();
       setTareas(prev => [tarea, ...prev]);
       setForm({ titulo: "", descripcion: "", prioridad: "MEDIA", contactoNombre: "", contactoTelefono: "" });
       setShowForm(false);
-      toast.success("Ticket creado");
+      const ahora = new Date().toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+      toast.success(`✅ Nota creada · ${ahora}`);
     });
   }
 
@@ -245,11 +246,11 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
         </div>
         <Button
           onClick={() => setShowForm(v => !v)}
-          className="bg-indigo-600 hover:bg-indigo-700"
+          className="bg-amber-500 hover:bg-amber-600"
           size="sm"
         >
           <Plus className="mr-1 h-4 w-4" />
-          Nuevo ticket
+          Nueva nota
         </Button>
       </div>
 
@@ -257,12 +258,12 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       {showForm && (
         <Card className="rounded-2xl border-indigo-100 bg-indigo-50/40">
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Nuevo ticket</CardTitle>
+            <CardTitle className="text-base">Nueva nota</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-3">
               <Input
-                placeholder="Título del ticket *"
+                placeholder="Título de la nota *"
                 value={form.titulo}
                 onChange={e => setForm(p => ({ ...p, titulo: e.target.value }))}
                 required
@@ -300,8 +301,8 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
               </div>
               <div className="flex gap-2 justify-end">
                 <Button type="button" variant="outline" onClick={() => setShowForm(false)}>Cancelar</Button>
-                <Button type="submit" disabled={isPending} className="bg-indigo-600 hover:bg-indigo-700">
-                  {isPending ? "Creando..." : "Crear ticket"}
+                <Button type="submit" disabled={isPending} className="bg-amber-500 hover:bg-amber-600">
+                  {isPending ? "Guardando..." : "Guardar nota"}
                 </Button>
               </div>
             </form>
@@ -312,10 +313,10 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
       {/* Board */}
       {pendientes.length === 0 && enCurso.length === 0 && !showForm ? (
         <div className="rounded-xl border border-dashed bg-white p-12 text-center shadow-sm">
-          <p className="mb-1 text-sm font-medium text-slate-600">Sin tickets activos</p>
-          <p className="mb-4 text-xs text-slate-400">Crea un ticket para empezar a gestionarlo</p>
-          <Button onClick={() => setShowForm(true)} className="bg-indigo-600 hover:bg-indigo-700" size="sm">
-            <Plus className="mr-1 h-4 w-4" /> Nuevo ticket
+          <p className="mb-1 text-sm font-medium text-slate-600">Sin notas activas</p>
+          <p className="mb-4 text-xs text-slate-400">Crea una nota para empezar. Solo tú la verás.</p>
+          <Button onClick={() => setShowForm(true)} className="bg-amber-500 hover:bg-amber-600" size="sm">
+            <Plus className="mr-1 h-4 w-4" /> Nueva nota
           </Button>
         </div>
       ) : (
@@ -331,7 +332,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
                 </div>
                 <div className="space-y-2 min-h-[100px]">
                   {items.length === 0 ? (
-                    <div className="rounded-xl border border-dashed p-6 text-center text-xs text-slate-400">Sin tareas</div>
+                    <div className="rounded-xl border border-dashed p-6 text-center text-xs text-slate-400">Sin notas</div>
                   ) : (
                     items.map(t => (
                       <TareaCard
@@ -359,7 +360,7 @@ export function TareasBoard({ initialTareas, isAdmin, currentUserId, usuarios }:
             onClick={() => setShowHechas(v => !v)}
             className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-3 text-sm font-semibold text-slate-600 shadow-sm hover:bg-slate-50"
           >
-            <span>✓ Tickets completados · {hechas.length}</span>
+            <span>✓ Notas completadas · {hechas.length}</span>
             <span className="text-xs text-slate-400">{showHechas ? "Ocultar" : "Ver"}</span>
           </button>
           {showHechas && (

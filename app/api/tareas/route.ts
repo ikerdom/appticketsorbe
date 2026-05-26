@@ -15,7 +15,8 @@ const createSchema = z.object({
 export async function GET(_request: NextRequest) {
   try {
     const user = await requireCurrentUser();
-    const where = user.rol === "ADMIN" ? {} : { empresaId: user.empresaId };
+    // Notas privadas: cada usuario solo ve las suyas; admin ve todas
+    const where = user.rol === "ADMIN" ? {} : { creadorId: user.id };
 
     const tareas = await prisma.tarea.findMany({
       where,

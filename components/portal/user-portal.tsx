@@ -105,13 +105,13 @@ export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPor
     {
       id: "internos",
       icon: <CheckSquare className="h-6 w-6" />,
-      label: "Tickets internos",
+      label: "Notas internas",
       main: tareasAct,
-      mainLabel: tareasAct === 1 ? "activo" : "activos",
-      sub: tareasEnCurso > 0 ? `${tareasEnCurso} en curso` : "Sin tickets en curso",
+      mainLabel: tareasAct === 1 ? "activa" : "activas",
+      sub: tareasEnCurso > 0 ? `${tareasEnCurso} en curso` : "Solo visibles para ti",
       gradient: "from-amber-500 to-orange-500",
       border: "border-amber-200",
-      iconBg: "bg-amber-100 text-amber-600"
+      iconBg: "bg-amber-100 text-amber-600",
     }
   ];
 

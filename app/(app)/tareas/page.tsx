@@ -4,16 +4,17 @@ import { requireCurrentPageUser } from "@/lib/data";
 import { TareasBoard } from "@/components/tareas/tareas-board";
 
 export const metadata: Metadata = {
-  title: "Tickets internos"
+  title: "Notas internas"
 };
 
 export default async function TareasPage() {
   const user = await requireCurrentPageUser();
   const isAdmin = user.rol === "ADMIN";
 
+  // Notas privadas: cada usuario solo ve las suyas. Admin ve todas.
   const [tareas, usuarios] = await Promise.all([
     prisma.tarea.findMany({
-      where: isAdmin ? {} : { empresaId: user.empresaId },
+      where: isAdmin ? {} : { creadorId: user.id },
       include: {
         empresa: { select: { id: true, nombre: true, color: true } },
         creador: { select: { id: true, email: true, nombre: true, name: true } },
@@ -31,9 +32,9 @@ export default async function TareasPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tickets</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900">Notas internas</h1>
         <p className="text-sm text-slate-500">
-          {isAdmin ? "Gestión de tickets · todas las empresas" : "Tickets de tu equipo"}
+          {isAdmin ? "Todas las notas · vista admin" : "Solo tú puedes ver tus notas"}
         </p>
       </div>
       <TareasBoard

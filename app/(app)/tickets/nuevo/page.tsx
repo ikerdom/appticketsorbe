@@ -3,11 +3,12 @@ import { requireCurrentPageUser } from "@/lib/data";
 import { NewTicketForm } from "@/components/tickets/new-ticket-form";
 
 export default async function NuevoTicketPage() {
-  await requireCurrentPageUser();
+  const user = await requireCurrentPageUser();
 
   const [empresas, categoriasCustom] = await Promise.all([
     prisma.empresa.findMany({
-      where: { isActive: true, isGlobalTarget: false, deletedAt: null },
+      // Excluir la propia empresa del usuario — el origen ya es automáticamente la suya
+      where: { isActive: true, isGlobalTarget: false, deletedAt: null, NOT: { id: user.empresaId } },
       select: { id: true, nombre: true, dominio: true, color: true },
       orderBy: { nombre: "asc" }
     }),
