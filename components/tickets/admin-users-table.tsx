@@ -269,26 +269,24 @@ export function AdminUsersTable({
                             >
                               {usuario.activo ? "Desactivar" : "Activar"}
                             </button>
-                            {usuario.rol === "ADMIN" ? (
-                              <button
-                                type="button"
-                                className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
-                                onClick={() => {
-                                  startTransition(async () => {
-                                    const response = await fetch(`/api/admin/usuarios/${usuario.id}/reset-password`, { method: "PATCH" });
-                                    if (!response.ok) {
-                                      toast.error(await readError(response, "No se pudo restablecer la contraseña"));
-                                      return;
-                                    }
-                                    toast.success("Contraseña restablecida a la contraseña global");
-                                    router.refresh();
-                                  });
-                                  setMenuUserId(null);
-                                }}
-                              >
-                                Restablecer contraseña
-                              </button>
-                            ) : null}
+                            <button
+                              type="button"
+                              className="block w-full rounded-md px-3 py-2 text-left text-sm hover:bg-muted"
+                              onClick={() => {
+                                startTransition(async () => {
+                                  const response = await fetch(`/api/admin/usuarios/${usuario.id}/reset-password`, { method: "PATCH" });
+                                  if (!response.ok) {
+                                    toast.error(await readError(response, "No se pudo restablecer la contraseña"));
+                                    return;
+                                  }
+                                  toast.success("Contraseña restablecida a 1234");
+                                  router.refresh();
+                                });
+                                setMenuUserId(null);
+                              }}
+                            >
+                              Restablecer contraseña
+                            </button>
                           </div>
                         ) : null}
                       </div>

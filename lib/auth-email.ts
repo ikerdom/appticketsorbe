@@ -8,12 +8,6 @@ export const CORPORATE_DOMAINS = [
 
 export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com"] as const;
 
-const LEGACY_TO_ACTIVE_DOMAIN: Record<string, string> = {
-  "bn-tic.es": "orbe.es",
-  "orbeformacion.com": "orbe.es",
-  "entenova-gnosis.com": "entenova.gnosis.com"
-};
-
 const DOMAIN_TO_EMPRESA: Record<string, string> = {
   "editorialcep.com": "Editorial CEP",
   "entenova.com": "Entenova",
@@ -46,12 +40,7 @@ export function parseEmailDomain(rawEmail: string) {
 }
 
 export function normalizeLoginEmail(rawEmail: string) {
-  const email = rawEmail.trim().toLowerCase();
-  const [local, domain] = email.split("@");
-  if (!local || !domain) return email;
-
-  const normalizedDomain = LEGACY_TO_ACTIVE_DOMAIN[domain] ?? domain;
-  return `${local}@${normalizedDomain}`;
+  return rawEmail.trim().toLowerCase();
 }
 
 export function isAllowedDomain(domain: string) {

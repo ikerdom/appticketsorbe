@@ -17,7 +17,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [needsPassword, setNeedsPassword] = useState(false);
+  const [step, setStep] = useState<"email" | "existing_password" | "set_password">("email");
   const [showRequest, setShowRequest] = useState(false);
   const [requestName, setRequestName] = useState("");
   const [requestDone, setRequestDone] = useState(false);
@@ -36,9 +36,10 @@ export default function LoginPage() {
   }, []);
 
   const submitLabel = useMemo(() => {
-    if (loading) return needsPassword ? "Entrando..." : "Continuando...";
-    return needsPassword ? "Entrar" : "Continuar";
-  }, [loading, needsPassword]);
+    if (loading) return step === "email" ? "Continuando..." : "Entrando...";
+    if (step === "set_password") return "Crear cuenta y entrar";
+    return step === "existing_password" ? "Entrar" : "Continuar";
+  }, [loading, step]);
 
   async function requestLogin(payload: { email: string; password?: string }) {
     const response = await fetch("/api/auth/login", {
@@ -66,31 +67,26 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      if (!needsPassword) {
+      if (step === "email") {
         const checkResponse = await fetch("/api/auth/check", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: normalizedEmail })
         });
-        const checkData = await checkResponse.json().catch(() => ({ needsPassword: false }));
+        const checkData = await checkResponse.json().catch(() => ({ status: "unknown" }));
 
-        if (!checkData.needsPassword) {
-          const { response, data } = await requestLogin({ email: normalizedEmail });
-          if (!response.ok || !data.ok) {
-            if (response.status === 423) {
-              setError("Cuenta desactivada. Contacta con un administrador.");
-              return;
-            }
-            setError("No tienes acceso a esta aplicación.");
-            if (domainAllowed) setShowRequest(true);
-            return;
-          }
-          router.push(data.redirect || "/");
-          router.refresh();
-          return;
+        if (checkData.status === "has_password") {
+          setStep("existing_password");
+        } else if (checkData.status === "set_password") {
+          setStep("set_password");
+        } else {
+          setError("Este correo no tiene acceso. Contacta con el administrador.");
         }
+        return;
+      }
 
-        setNeedsPassword(true);
+      if (!password || password.length < 4) {
+        setError("La contraseña debe tener al menos 4 caracteres.");
         return;
       }
 
@@ -100,7 +96,7 @@ export default function LoginPage() {
           setError("Cuenta desactivada. Contacta con un administrador.");
           return;
         }
-        setError("Credenciales incorrectas.");
+        setError(data.message || (step === "existing_password" ? "Contraseña incorrecta." : "No se pudo crear la cuenta."));
         return;
       }
       router.push(data.redirect || "/");
@@ -151,16 +147,16 @@ export default function LoginPage() {
                     placeholder="tu@empresa.com"
                     autoComplete="email"
                     autoFocus
-                    readOnly={needsPassword}
+                    readOnly={step !== "email"}
                     value={email}
                     onChange={(event) => setEmail(event.target.value)}
                   />
-                  {needsPassword ? (
+                  {step !== "email" ? (
                     <Button
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        setNeedsPassword(false);
+                        setStep("email");
                         setPassword("");
                         setError(null);
                       }}
@@ -196,15 +192,25 @@ export default function LoginPage() {
                 ) : null}
               </div>
 
-              {needsPassword ? (
+              {step === "set_password" ? (
+                <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-3.5 py-3 text-sm text-indigo-800">
+                  <p className="font-semibold">Primera vez aquí 👋</p>
+                  <p className="mt-0.5 text-xs text-indigo-600">Elige una contraseña para tu cuenta (mínimo 4 caracteres).</p>
+                </div>
+              ) : null}
+
+              {step !== "email" ? (
                 <div className="space-y-1.5">
-                  <Label htmlFor="password">Contraseña</Label>
+                  <Label htmlFor="password">
+                    {step === "set_password" ? "Elige tu contraseña" : "Contraseña"}
+                  </Label>
                   <div className="relative">
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      autoComplete="current-password"
+                      autoComplete={step === "set_password" ? "new-password" : "current-password"}
                       autoFocus
+                      minLength={4}
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
                     />
@@ -226,15 +232,21 @@ export default function LoginPage() {
                 </div>
               ) : null}
 
-              <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700" disabled={loading || !domainAllowed}>
+              <Button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700"
+                disabled={loading || !domainAllowed || (step !== "email" && password.length < 4)}
+              >
                 {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 {submitLabel}
               </Button>
 
               <div className="flex items-center justify-between text-xs">
-                <Link className="text-indigo-600 hover:underline" href="/recuperar">
-                  ¿Olvidaste tu contraseña?
-                </Link>
+                {step === "existing_password" ? (
+                  <Link className="text-indigo-600 hover:underline" href="/recuperar">
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                ) : <span />}
                 {showRequest ? (
                   <button type="button" className="text-indigo-600 hover:underline" onClick={() => setShowRequest(true)}>
                     Solicitar alta

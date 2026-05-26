@@ -32,15 +32,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: "Demasiados intentos. Prueba en un minuto." }, { status: 429 });
     }
 
+    if (!password || password.length < 4) {
+      return NextResponse.json({ ok: false, message: "La contraseña debe tener al menos 4 caracteres." }, { status: 400 });
+    }
+
     let user = await prisma.user.findUnique({
       where: { email },
       select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
     });
 
+    const allowedByRaw = isAllowedEmail(emailInput);
+    const allowedByNormalized = isAllowedEmail(email);
+    const allowed = allowedByRaw || allowedByNormalized;
+
     if (!user) {
-      const allowedByRaw = isAllowedEmail(emailInput);
-      const allowedByNormalized = isAllowedEmail(email);
-      if (!allowedByRaw && !allowedByNormalized) {
+      if (!allowed) {
         console.warn(`[login] no autorizado: ${email}`);
         return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
       }
@@ -57,33 +63,46 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
       }
 
+      const passwordHash = await bcrypt.hash(password, 12);
       user = await prisma.user.create({
         data: {
           email,
           rol: "USER",
           empresaId: empresa.id,
           activo: true,
-          passwordHash: null,
+          passwordHash,
           mustChangePassword: false
         },
         select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
       });
+      console.log(`[login] nuevo usuario creado: ${email}`);
+    } else {
+      if (!user.activo) {
+        return NextResponse.json({ ok: false, message: "Usuario desactivado" }, { status: 423 });
+      }
+
+      if (!user.passwordHash) {
+        // Primer login: dominio permitido → establecer contraseña
+        if (!allowed) {
+          return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
+        }
+        const passwordHash = await bcrypt.hash(password, 12);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { passwordHash, mustChangePassword: false }
+        });
+        user = { ...user, passwordHash };
+        console.log(`[login] contraseña establecida para: ${email}`);
+      } else {
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) {
+          return NextResponse.json({ ok: false, message: "Contraseña incorrecta." }, { status: 401 });
+        }
+      }
     }
 
     if (!user.activo) {
       return NextResponse.json({ ok: false, message: "Usuario desactivado" }, { status: 423 });
-    }
-
-    // Todos los usuarios deben tener contraseña configurada para entrar
-    if (!user.passwordHash) {
-      return NextResponse.json({ ok: false, message: "Tu cuenta no tiene contraseña. Pide al administrador que la configure." }, { status: 401 });
-    }
-    if (!password) {
-      return NextResponse.json({ ok: false, message: "Introduce tu contraseña." }, { status: 401 });
-    }
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) {
-      return NextResponse.json({ ok: false, message: "Contraseña incorrecta." }, { status: 401 });
     }
 
     const session = await createSessionForUser({ id: user.id, rol: user.rol });
