@@ -52,14 +52,16 @@ export async function POST(request: NextRequest) {
       }
 
       const [, rawDomain = ""] = email.split("@");
-      const domain = resolveActiveDomain(rawDomain);
+      const resolvedDomain = resolveActiveDomain(rawDomain);
+      // Buscar por dominio resuelto, dominio original, o cualquier variante conocida
+      const candidatos = Array.from(new Set([resolvedDomain, rawDomain]));
       const empresa = await prisma.empresa.findFirst({
-        where: { dominio: domain, isActive: true, isGlobalTarget: false, deletedAt: null },
+        where: { dominio: { in: candidatos }, isActive: true, isGlobalTarget: false, deletedAt: null },
         select: { id: true }
       });
 
       if (!empresa) {
-        console.error(`[login] empresa no encontrada para dominio: ${domain}`);
+        console.error(`[login] empresa no encontrada para dominios: ${candidatos.join(", ")}`);
         return NextResponse.json({ ok: false, message: "No tienes acceso a esta aplicacion" }, { status: 401 });
       }
 
