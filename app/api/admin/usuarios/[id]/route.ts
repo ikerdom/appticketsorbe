@@ -1,8 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/data";
-import { ADMIN_PASSWORD } from "@/lib/auth/config";
 
 const GHOST_EMAIL = "usuario.eliminado@system.local";
 

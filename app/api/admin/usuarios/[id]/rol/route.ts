@@ -1,9 +1,7 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { Rol } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/data";
-import { ADMIN_PASSWORD } from "@/lib/auth/config";
 
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
