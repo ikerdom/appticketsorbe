@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
@@ -77,38 +77,36 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
 const CATEGORY_OPTIONS = ["Emails", "Seguridad", "Técnico", "Máquina", "Impresora", "Pedidos", "Presupuestos", "Otros"];
 
 export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, currentUserEmpresaId, initialEmpresaFilter }: KanbanBoardProps) {
+  // Full list of tickets — only replaced after DnD state changes
   const [tickets, setTickets] = useState<TicketCardData[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const isFirstRender = useRef(true);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  // Client-side filters — no API call on change
   const [filters, setFilters] = useState({
-    empresaDestinoId: initialEmpresaFilter ?? "",
+    empresaId: initialEmpresaFilter ?? "",
     prioridad: "",
     categoria: ""
   });
 
+  // Sync empresa filter when parent (AdminEmpresasPanel) changes selected company
+  const prevEmpresaFilter = useRef(initialEmpresaFilter);
   useEffect(() => {
-    if (initialEmpresaFilter === undefined) return;
-    const next = { empresaDestinoId: initialEmpresaFilter, prioridad: "", categoria: "" };
-    setFilters(next);
-    // On first mount, use SSR data (initialTickets) — no refetch needed.
-    // Only refetch when the filter actually changes after mount.
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
+    if (initialEmpresaFilter !== prevEmpresaFilter.current) {
+      prevEmpresaFilter.current = initialEmpresaFilter;
+      setFilters(prev => ({ ...prev, empresaId: initialEmpresaFilter ?? "" }));
     }
-    startTransition(() => { void refreshWithFilters(next); });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialEmpresaFilter]);
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   const hasActiveFilters = useMemo(
-    () => Boolean(filters.empresaDestinoId || filters.prioridad || filters.categoria),
+    () => Boolean(filters.empresaId || filters.prioridad || filters.categoria),
     [filters]
   );
 
+  // Historico: resolved tickets older than HISTORICO_DIAS — always from full list
   const historicoResueltas = useMemo(() => {
     const cutoff = Date.now() - HISTORICO_DIAS * 24 * 60 * 60 * 1000;
     return tickets
@@ -116,10 +114,34 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       .sort((a, b) => new Date(b.resueltoAt ?? b.updatedAt).getTime() - new Date(a.resueltoAt ?? a.updatedAt).getTime());
   }, [tickets]);
 
+  const historicoIds = useMemo(() => new Set(historicoResueltas.map((t) => t.id)), [historicoResueltas]);
+
+  // Client-side filtered tickets (empresa, prioridad, categoria + hide historico)
   const visibleTickets = useMemo(() => {
-    const hiddenIds = new Set(historicoResueltas.map((t) => t.id));
-    return tickets.filter((t) => !hiddenIds.has(t.id));
-  }, [tickets, historicoResueltas]);
+    const cutoff = Date.now() - HISTORICO_DIAS * 24 * 60 * 60 * 1000;
+    return tickets.filter((t) => {
+      // Hide old resolved tickets (they go to historico section)
+      if (t.estado === "RESUELTO" && new Date(t.resueltoAt ?? t.updatedAt).getTime() < cutoff) {
+        return false;
+      }
+      // Empresa filter
+      if (filters.empresaId) {
+        const match =
+          t.empresaOrigenId === filters.empresaId ||
+          t.empresaDestinoId === filters.empresaId ||
+          t.destinos.some((d) => d.empresaId === filters.empresaId);
+        if (!match) return false;
+      }
+      // Prioridad filter
+      if (filters.prioridad && t.prioridad !== filters.prioridad) return false;
+      // Categoria filter
+      if (filters.categoria) {
+        const cat = ((t.categoriaCustom ?? "") || t.categoria || "").toLowerCase();
+        if (!cat.includes(filters.categoria.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [tickets, filters, historicoIds]);
 
   const grouped = useMemo(
     () => ({
@@ -148,27 +170,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     [grouped, currentUserEmpresaId, isAdmin]
   );
 
-  async function refreshWithFilters(nextFilters = filters) {
-    const params = new URLSearchParams();
-    Object.entries(nextFilters).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-    });
-
-    const response = await fetch(`/api/tickets?${params.toString()}`, { cache: "no-store" });
+  // Refresh full ticket list from API (called after DnD state changes)
+  async function refreshAllTickets() {
+    const response = await fetch(`/api/tickets`, { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json();
-    setTickets(data.tickets);
-  }
-
-  function updateFilter(key: string, value: string) {
-    const next = { ...filters, [key]: value };
-    setFilters(next);
-    if (key === "vistaEmpresa") {
-      window.localStorage.setItem("kanban-vista-empresa", value);
-    }
-    startTransition(() => {
-      void refreshWithFilters(next);
-    });
+    setTickets(data.tickets ?? []);
   }
 
   async function onDragEnd(event: any) {
@@ -207,17 +214,13 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       if (!ok) return;
     }
 
+    // Optimistic update
     const previous = tickets;
-    const optimistic = tickets.map((t) =>
+    setTickets(tickets.map((t) =>
       t.id === ticketId
-        ? {
-            ...t,
-            estado: targetEstado,
-            asignadoId: canTakeByDrag ? currentUserId : t.asignadoId
-          }
+        ? { ...t, estado: targetEstado, asignadoId: canTakeByDrag ? currentUserId : t.asignadoId }
         : t
-    );
-    setTickets(optimistic);
+    ));
 
     const response = await fetch(`/api/tickets/${ticketId}/estado`, {
       method: "PATCH",
@@ -233,7 +236,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     }
 
     toast.success("Ticket actualizado");
-    await refreshWithFilters();
+    startTransition(() => { void refreshAllTickets(); });
   }
 
   return (
@@ -250,7 +253,10 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
         </div>
 
         <div className="grid gap-2.5 md:grid-cols-3">
-          <Select value={filters.empresaDestinoId} onChange={(e) => updateFilter("empresaDestinoId", e.target.value)}>
+          <Select
+            value={filters.empresaId}
+            onChange={(e) => setFilters(prev => ({ ...prev, empresaId: e.target.value }))}
+          >
             <option value="">{isAdmin ? "Todas las empresas" : "Todos mis tickets"}</option>
             {empresas.map((empresa) => (
               <option key={empresa.id} value={empresa.id}>
@@ -259,7 +265,10 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
             ))}
           </Select>
 
-          <Select value={filters.prioridad} onChange={(e) => updateFilter("prioridad", e.target.value)}>
+          <Select
+            value={filters.prioridad}
+            onChange={(e) => setFilters(prev => ({ ...prev, prioridad: e.target.value }))}
+          >
             <option value="">Cualquier prioridad</option>
             {Object.values(Prioridad).map((prioridad) => (
               <option key={prioridad} value={prioridad}>
@@ -268,7 +277,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
             ))}
           </Select>
 
-          <Input list="categorias-options" value={filters.categoria} onChange={(e) => updateFilter("categoria", e.target.value)} placeholder="Filtrar por categoría…" />
+          <Input
+            list="categorias-options"
+            value={filters.categoria}
+            onChange={(e) => setFilters(prev => ({ ...prev, categoria: e.target.value }))}
+            placeholder="Filtrar por categoría…"
+          />
           <datalist id="categorias-options">
             {CATEGORY_OPTIONS.map((categoria) => (
               <option key={categoria} value={categoria} />
@@ -281,17 +295,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
             <button
               type="button"
               className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-              onClick={() => {
-                const reset = {
-                  empresaDestinoId: isAdmin ? "" : currentUserEmpresaId,
-                  prioridad: "",
-                  categoria: ""
-                };
-                setFilters(reset);
-                startTransition(() => {
-                  void refreshWithFilters(reset);
-                });
-              }}
+              onClick={() => setFilters({ empresaId: "", prioridad: "", categoria: "" })}
             >
               × Limpiar filtros
             </button>
@@ -303,8 +307,12 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
       {visibleTickets.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
-          <p className="mb-1 text-sm font-medium text-slate-600">Sin tickets con estos filtros</p>
-          <p className="mb-4 text-xs text-slate-400">Prueba a cambiar los filtros o crea un nuevo ticket</p>
+          <p className="mb-1 text-sm font-medium text-slate-600">
+            {hasActiveFilters ? "Sin tickets con estos filtros" : "Sin tickets activos"}
+          </p>
+          <p className="mb-4 text-xs text-slate-400">
+            {hasActiveFilters ? "Prueba a cambiar los filtros o crea un nuevo ticket" : "Todo al día 👌"}
+          </p>
           <Link href="/tickets/nuevo" className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors">
             <Plus className="h-4 w-4" />
             Nuevo ticket
@@ -319,7 +327,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
             onClick={() => setShowHistorico((prev) => !prev)}
             className="flex w-full items-center justify-between text-left text-sm font-semibold text-slate-700"
           >
-            <span>Histórico de resueltas · {historicoResueltas.length}</span>
+            <span>Histórico de resueltos · {historicoResueltas.length}</span>
             {showHistorico ? <ChevronUp className="h-4 w-4 text-slate-400" /> : <ChevronDown className="h-4 w-4 text-slate-400" />}
           </button>
 
@@ -335,7 +343,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
                         {empresa.nombre}
                       </span>
                       <span className="text-xs text-slate-400">
-                        Resuelta: {formatDateTimeEs(ticket.resueltoAt ?? ticket.updatedAt)}
+                        Resuelto: {formatDateTimeEs(ticket.resueltoAt ?? ticket.updatedAt)}
                       </span>
                     </div>
                     <p className="text-sm font-semibold text-slate-800">

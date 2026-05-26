@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         empresaDestino: true,
         destinos: { include: { empresa: true } },
         creador: { select: { id: true, email: true, nombre: true, name: true } },
-        asignado: { select: { id: true, email: true, nombre: true, name: true } },
+        asignado: { select: { id: true, email: true, nombre: true, name: true, image: true } },
         _count: { select: { comentarios: true } }
       },
       orderBy: { updatedAt: "desc" }
