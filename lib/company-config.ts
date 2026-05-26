@@ -15,6 +15,18 @@ export function resolveActiveDomain(domain: string) {
   return LEGACY_DOMAIN_TO_ACTIVE[domain] ?? domain;
 }
 
+// Para buscar usuarios creados con la normalización antigua (guión → punto)
+const LEGACY_EMAIL_DOMAIN: Record<string, string> = {
+  "entenova-gnosis.com": "entenova.gnosis.com"
+};
+
+export function legacyNormalizeEmail(email: string) {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return email;
+  const mapped = LEGACY_EMAIL_DOMAIN[domain] ?? domain;
+  return `${local}@${mapped}`;
+}
+
 export function companyFromDomain(rawDomain: string) {
   const domain = resolveActiveDomain(rawDomain.toLowerCase());
   const company = ACTIVE_COMPANIES.find((item) => item.dominio === domain);

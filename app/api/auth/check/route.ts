@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isAllowedEmail } from "@/lib/auth-email";
-import { normalizeLoginEmail } from "@/lib/auth-email";
+import { isAllowedEmail, normalizeLoginEmail } from "@/lib/auth-email";
+import { legacyNormalizeEmail } from "@/lib/company-config";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -12,17 +12,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "unknown" });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Buscar por email exacto y por versión legacy (por si fue creado con la normalización antigua)
+    const emailLegacy = legacyNormalizeEmail(email);
+    const user = await prisma.user.findFirst({
+      where: { email: { in: Array.from(new Set([email, emailLegacy])) } },
       select: { passwordHash: true, activo: true }
     });
 
-    // Usuario existente con contraseña
     if (user && user.passwordHash) {
       return NextResponse.json({ status: "has_password" });
     }
 
-    // Usuario existente sin contraseña, o usuario nuevo pero dominio permitido
     if (isAllowedEmail(email)) {
       return NextResponse.json({ status: "set_password" });
     }

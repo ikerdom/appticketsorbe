@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { APP_ROLE_COOKIE, APP_SESSION_COOKIE, cookieCommonOptions, createSessionForUser } from "@/lib/auth-session";
 import { isAllowedEmail, isEmailFormat, normalizeLoginEmail } from "@/lib/auth-email";
-import { resolveActiveDomain } from "@/lib/company-config";
+import { legacyNormalizeEmail, resolveActiveDomain } from "@/lib/company-config";
 import { prisma } from "@/lib/prisma";
 
 function getClientIp(request: NextRequest) {
@@ -36,8 +36,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: "La contraseña debe tener al menos 4 caracteres." }, { status: 400 });
     }
 
-    let user = await prisma.user.findUnique({
-      where: { email },
+    const emailLegacy = legacyNormalizeEmail(email);
+    const emailCandidatos = Array.from(new Set([email, emailLegacy]));
+    let user = await prisma.user.findFirst({
+      where: { email: { in: emailCandidatos } },
       select: { id: true, email: true, rol: true, activo: true, passwordHash: true }
     });
 
