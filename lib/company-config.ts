@@ -7,7 +7,8 @@
 
 export const LEGACY_DOMAIN_TO_ACTIVE: Record<string, string> = {
   "bn-tic.es": "orbe.es",
-  "orbeformacion.com": "orbe.es"
+  "orbeformacion.com": "orbe.es",
+  "entenova-gnosis.com": "entenova.gnosis.com"
 };
 
 export function resolveActiveDomain(domain: string) {
