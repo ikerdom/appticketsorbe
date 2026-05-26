@@ -3,13 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Plus, AlertCircle, Clock, CheckCircle2,
-  MessageSquare, ChevronRight, StickyNote
+  AlertCircle, CheckCircle2, ChevronDown, ChevronRight, ChevronUp,
+  Clock, MessageSquare, Plus, StickyNote
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
 import { TareasBoard } from "@/components/tareas/tareas-board";
-
-type Section = "internos" | null;
 
 type TicketEstado = "ABIERTO" | "EN_CURSO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
@@ -55,10 +53,38 @@ interface UserPortalProps {
   autorEmail: string;
 }
 
-const ESTADO_TICKET: Record<TicketEstado, { label: string; icon: React.ReactNode; color: string }> = {
-  ABIERTO:  { label: "Abierto",  icon: <AlertCircle className="h-3.5 w-3.5" />,  color: "text-red-500 bg-red-50" },
-  EN_CURSO: { label: "En curso", icon: <Clock className="h-3.5 w-3.5" />,         color: "text-amber-600 bg-amber-50" },
-  RESUELTO: { label: "Resuelto", icon: <CheckCircle2 className="h-3.5 w-3.5" />,  color: "text-emerald-600 bg-emerald-50" }
+const ESTADO_CONFIG: Record<TicketEstado, {
+  label: string;
+  icon: React.ReactNode;
+  header: string;
+  dot: string;
+  badge: string;
+  dropzone: string;
+}> = {
+  ABIERTO: {
+    label: "Abiertos",
+    icon: <AlertCircle className="h-3.5 w-3.5" />,
+    header: "bg-red-50 border-red-100 text-red-800",
+    dot: "bg-red-500",
+    badge: "bg-red-100 text-red-700 ring-1 ring-red-200",
+    dropzone: "bg-red-50/30"
+  },
+  EN_CURSO: {
+    label: "En curso",
+    icon: <Clock className="h-3.5 w-3.5" />,
+    header: "bg-amber-50 border-amber-100 text-amber-800",
+    dot: "bg-amber-500",
+    badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
+    dropzone: "bg-amber-50/30"
+  },
+  RESUELTO: {
+    label: "Resueltos",
+    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    header: "bg-emerald-50 border-emerald-100 text-emerald-800",
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
+    dropzone: "bg-emerald-50/30"
+  }
 };
 
 const PRIORIDAD_DOT: Record<Prioridad, string> = {
@@ -68,76 +94,105 @@ const PRIORIDAD_DOT: Record<Prioridad, string> = {
   CRITICA: "bg-red-500 animate-pulse"
 };
 
-export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPortalProps) {
-  const [section, setSection] = useState<Section>(null);
-  const [showResueltos, setShowResueltos] = useState(false);
+const PRIORIDAD_LABEL: Record<Prioridad, string> = {
+  CRITICA: "Crítica", ALTA: "Alta", MEDIA: "Media", BAJA: "Baja"
+};
 
-  const activos    = tickets.filter(t => t.estado !== "RESUELTO");
-  const resueltos  = tickets.filter(t => t.estado === "RESUELTO");
-  const sinLeer    = tickets.filter(t => t.unread).length;
-  const tareasAct  = tareas.filter(t => t.estado !== "HECHO").length;
+export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPortalProps) {
+  const [showResueltos, setShowResueltos] = useState(false);
+  const [showNotas, setShowNotas] = useState(false);
+
+  const abiertos  = tickets.filter(t => t.estado === "ABIERTO");
+  const enCurso   = tickets.filter(t => t.estado === "EN_CURSO");
+  const resueltos = tickets.filter(t => t.estado === "RESUELTO");
+  const sinLeer   = tickets.filter(t => t.unread).length;
+  const tareasAct = tareas.filter(t => t.estado !== "HECHO").length;
+  const activos   = abiertos.length + enCurso.length;
 
   return (
     <div className="space-y-4">
 
-      {/* Cabecera tickets + botón nuevo */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5">
-          <span className="text-sm font-bold text-slate-700">Mis tickets</span>
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-bold text-indigo-700">
-            {activos.length} activos
-          </span>
+      {/* Cabecera */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 shadow-sm">
+          <span className="text-sm font-bold text-slate-800">{activos}</span>
+          <span className="text-xs text-slate-400">activos</span>
           {sinLeer > 0 && (
-            <span className="rounded-full bg-red-500 px-2 py-0.5 text-[10px] font-bold text-white">
-              {sinLeer} sin leer
-            </span>
+            <span className="ml-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{sinLeer}</span>
           )}
         </div>
+        <div className="flex items-center gap-1.5 rounded-xl border bg-red-50 px-3 py-2 text-sm">
+          <span className="font-bold text-red-600">{abiertos.length}</span>
+          <span className="text-xs text-red-400">abiertos</span>
+        </div>
+        <div className="flex items-center gap-1.5 rounded-xl border bg-amber-50 px-3 py-2 text-sm">
+          <span className="font-bold text-amber-600">{enCurso.length}</span>
+          <span className="text-xs text-amber-400">en curso</span>
+        </div>
+        <div className="flex-1" />
         <Link
           href="/tickets/nuevo"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
         >
           <Plus className="h-4 w-4" />
           Nuevo ticket
         </Link>
       </div>
 
-      {/* Lista tickets activos */}
-      {activos.length === 0 ? (
+      {/* Kanban 3 columnas — desktop */}
+      {tickets.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
           <p className="mb-1 text-sm font-medium text-slate-500">Sin tickets activos</p>
-          <p className="mb-4 text-xs text-slate-400">Todo al día 👌</p>
+          <p className="text-xs text-slate-400">Todo al día 👌</p>
         </div>
       ) : (
-        <div className="space-y-1.5">
-          {activos.map(t => <TicketRow key={t.id} ticket={t} />)}
-        </div>
-      )}
-
-      {/* Resueltos colapsables */}
-      {resueltos.length > 0 && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowResueltos(v => !v)}
-            className="flex w-full items-center justify-between rounded-xl border bg-white px-4 py-2.5 text-sm font-medium text-slate-500 shadow-sm hover:bg-slate-50 transition"
-          >
-            <span>✓ Resueltos · {resueltos.length}</span>
-            <span className="text-xs text-slate-400">{showResueltos ? "Ocultar" : "Ver"}</span>
-          </button>
-          {showResueltos && (
-            <div className="mt-1.5 space-y-1.5">
-              {resueltos.map(t => <TicketRow key={t.id} ticket={t} />)}
+        <>
+          {/* Desktop: 3 cols (resueltos ocultos por defecto) */}
+          <div className="hidden gap-3 md:grid md:grid-cols-3">
+            {(["ABIERTO", "EN_CURSO"] as TicketEstado[]).map(estado => (
+              <KanbanCol key={estado} estado={estado} tickets={estado === "ABIERTO" ? abiertos : enCurso} />
+            ))}
+            {/* Resueltos colapsables en desktop */}
+            <div className="space-y-2">
+              <KanbanColHeader estado="RESUELTO" count={resueltos.length} />
+              {resueltos.length > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setShowResueltos(v => !v)}
+                    className="flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50"
+                  >
+                    <span>{showResueltos ? "Ocultar" : "Ver resueltos"}</span>
+                    {showResueltos ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </button>
+                  {showResueltos && (
+                    <div className="space-y-1.5">
+                      {resueltos.map(t => <TicketCard key={t.id} ticket={t} />)}
+                    </div>
+                  )}
+                </>
+              )}
+              {resueltos.length === 0 && (
+                <div className="rounded-xl border border-dashed p-5 text-center text-xs text-slate-400 bg-emerald-50/30">Sin resueltos</div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+
+          {/* Mobile: lista por estado */}
+          <div className="space-y-3 md:hidden">
+            {(["ABIERTO", "EN_CURSO", "RESUELTO"] as TicketEstado[]).map(estado => {
+              const list = estado === "ABIERTO" ? abiertos : estado === "EN_CURSO" ? enCurso : resueltos;
+              return <KanbanCol key={estado} estado={estado} tickets={list} />;
+            })}
+          </div>
+        </>
       )}
 
-      {/* Notas internas — discreta, al final */}
+      {/* Notas internas — discreta al final */}
       <div className="border-t pt-3">
         <button
           type="button"
-          onClick={() => setSection(section === "internos" ? null : "internos")}
+          onClick={() => setShowNotas(v => !v)}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
         >
           <StickyNote className="h-3.5 w-3.5" />
@@ -145,10 +200,9 @@ export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPor
           {tareasAct > 0 && (
             <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">{tareasAct}</span>
           )}
-          <ChevronRight className={`ml-auto h-3.5 w-3.5 transition-transform ${section === "internos" ? "rotate-90" : ""}`} />
+          <ChevronRight className={`ml-auto h-3.5 w-3.5 transition-transform ${showNotas ? "rotate-90" : ""}`} />
         </button>
-
-        {section === "internos" && (
+        {showNotas && (
           <div className="mt-3">
             <TareasBoard
               initialTareas={tareas}
@@ -163,30 +217,62 @@ export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPor
   );
 }
 
-function TicketRow({ ticket }: { ticket: PortalTicket }) {
-  const cfg = ESTADO_TICKET[ticket.estado];
+function KanbanColHeader({ estado, count }: { estado: TicketEstado; count: number }) {
+  const cfg = ESTADO_CONFIG[estado];
+  return (
+    <div className={`rounded-xl border px-4 py-2.5 ${cfg.header}`}>
+      <div className="flex items-center gap-2.5">
+        <div className={`h-2.5 w-2.5 rounded-full ${cfg.dot}`} />
+        <span className="text-sm font-bold">{cfg.label}</span>
+        <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold ${cfg.badge}`}>{count}</span>
+      </div>
+    </div>
+  );
+}
+
+function KanbanCol({ estado, tickets }: { estado: TicketEstado; tickets: PortalTicket[] }) {
+  const cfg = ESTADO_CONFIG[estado];
+  return (
+    <div className="space-y-2">
+      <KanbanColHeader estado={estado} count={tickets.length} />
+      <div className={`min-h-[160px] space-y-1.5 rounded-xl p-2 ${cfg.dropzone}`}>
+        {tickets.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-current/20 p-5 text-center text-xs text-slate-400 opacity-60">
+            Sin tickets
+          </div>
+        ) : (
+          tickets.map(t => <TicketCard key={t.id} ticket={t} />)
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TicketCard({ ticket }: { ticket: PortalTicket }) {
   return (
     <Link
       href={`/tickets/${ticket.id}`}
-      className="flex items-center gap-3 rounded-xl border bg-white px-4 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition group"
+      className="block rounded-xl border bg-white px-3.5 py-3 shadow-sm hover:shadow-md hover:border-indigo-200 transition group"
     >
-      <div className={`h-2 w-2 shrink-0 rounded-full ${ticket.unread ? "bg-indigo-500" : "bg-transparent"}`} />
-      <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${PRIORIDAD_DOT[ticket.prioridad]}`} />
-      <div className="min-w-0 flex-1">
-        <p className={`truncate text-sm font-semibold ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>{ticket.titulo}</p>
-        <p className="text-[11px] text-slate-400">{ticket.empresaOrigen.nombre} · {formatRelativeEs(ticket.updatedAt)}</p>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          {ticket.unread && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />}
+          <span className={`h-2 w-2 shrink-0 rounded-full ${PRIORIDAD_DOT[ticket.prioridad]}`} />
+          <span className="text-[10px] font-semibold text-slate-400">{PRIORIDAD_LABEL[ticket.prioridad]}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          {ticket._count.comentarios > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
+              <MessageSquare className="h-3 w-3" />{ticket._count.comentarios}
+            </span>
+          )}
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 transition" />
+        </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {ticket._count.comentarios > 0 && (
-          <span className="flex items-center gap-0.5 text-[11px] text-slate-400">
-            <MessageSquare className="h-3 w-3" />{ticket._count.comentarios}
-          </span>
-        )}
-        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${cfg.color}`}>
-          {cfg.icon}{cfg.label}
-        </span>
-        <ChevronRight className="h-4 w-4 text-slate-300 group-hover:text-slate-500 transition" />
-      </div>
+      <p className={`line-clamp-2 text-sm font-semibold leading-snug ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
+        {ticket.titulo}
+      </p>
+      <p className="mt-1 text-[10px] text-slate-400">{formatRelativeEs(ticket.updatedAt)}</p>
     </Link>
   );
 }

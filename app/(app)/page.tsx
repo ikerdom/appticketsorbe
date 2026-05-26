@@ -54,7 +54,16 @@ export default async function DashboardPage() {
     { id: user.id, rol: user.rol }
   );
 
-  const ticketsWithUnread = tickets.map((t) => ({ ...t, unread: unread[t.id] ?? false }));
+  const PRIORIDAD_ORDEN: Record<string, number> = { CRITICA: 0, ALTA: 1, MEDIA: 2, BAJA: 3 };
+
+  const ticketsWithUnread = tickets
+    .map((t) => ({ ...t, unread: unread[t.id] ?? false }))
+    .sort((a, b) => {
+      const pa = PRIORIDAD_ORDEN[a.prioridad] ?? 9;
+      const pb = PRIORIDAD_ORDEN[b.prioridad] ?? 9;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
 
   if (isAdmin) {
     const empresaStats = empresas.map((empresa) => {

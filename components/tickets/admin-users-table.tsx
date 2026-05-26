@@ -56,7 +56,8 @@ export function AdminUsersTable({
     email: "",
     nombre: "",
     empresaId: "",
-    rol: "USER" as "USER" | "ADMIN"
+    rol: "USER" as "USER" | "ADMIN",
+    password: ""
   });
 
   const [menuUserId, setMenuUserId] = useState<string | null>(null);
@@ -324,18 +325,20 @@ export function AdminUsersTable({
                 <option value="USER">Usuario</option>
                 <option value="ADMIN">Admin</option>
               </select>
-              {createForm.rol === "ADMIN" ? (
-                <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">Los administradores usan la contraseña global de la app.</p>
-              ) : (
-                <p className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">Los usuarios normales entran solo con su email.</p>
-              )}
+              <Input
+                type="password"
+                placeholder="Contraseña (mín. 4 caracteres)"
+                value={createForm.password}
+                onChange={(event) => setCreateForm((prev) => ({ ...prev, password: event.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">El usuario podrá cambiarla después desde su perfil.</p>
             </div>
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" onClick={() => closeAllDialogs()}>
                 Cancelar
               </Button>
               <Button
-                disabled={!createForm.email || !createForm.empresaId || isPending}
+                disabled={!createForm.email || !createForm.empresaId || createForm.password.length < 4 || isPending}
                 onClick={() => {
                   startTransition(async () => {
                     const response = await fetch("/api/admin/usuarios", {
@@ -345,7 +348,8 @@ export function AdminUsersTable({
                         email: createForm.email,
                         nombre: createForm.nombre,
                         empresaId: createForm.empresaId,
-                        rol: createForm.rol
+                        rol: createForm.rol,
+                        password: createForm.password
                       })
                     });
                     if (!response.ok) {
@@ -354,7 +358,7 @@ export function AdminUsersTable({
                     }
                     toast.success("Usuario creado");
                     closeAllDialogs();
-                    setCreateForm({ email: "", nombre: "", empresaId: "", rol: "USER" });
+                    setCreateForm({ email: "", nombre: "", empresaId: "", rol: "USER", password: "" });
                     router.refresh();
                   });
                 }}

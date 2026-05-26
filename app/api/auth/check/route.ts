@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
       select: { rol: true, passwordHash: true }
     });
 
-    const needsPassword = Boolean(user && user.rol === "ADMIN" && user.passwordHash);
+    // Todos los usuarios con contraseña configurada deben introducirla
+    const needsPassword = Boolean(user && user.passwordHash);
     return NextResponse.json({ needsPassword });
   } catch {
     return NextResponse.json({ needsPassword: false });

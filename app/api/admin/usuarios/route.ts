@@ -4,7 +4,6 @@ import { Rol } from "@prisma/client";
 import { isAllowedEmail, isEmailFormat } from "@/lib/auth-email";
 import { requireAdmin } from "@/lib/data";
 import { prisma } from "@/lib/prisma";
-import { ADMIN_PASSWORD } from "@/lib/auth/config";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,10 +13,14 @@ export async function POST(request: NextRequest) {
     const email = String(body.email ?? "").trim().toLowerCase();
     const nombre = String(body.nombre ?? "").trim();
     const empresaId = String(body.empresaId ?? "").trim();
+    const password = String(body.password ?? "").trim();
     const rol: Rol = body.rol === "ADMIN" ? "ADMIN" : "USER";
 
     if (!email || !empresaId) {
-      return NextResponse.json({ error: "Nombre, email y empresa son obligatorios." }, { status: 400 });
+      return NextResponse.json({ error: "Email y empresa son obligatorios." }, { status: 400 });
+    }
+    if (!password || password.length < 4) {
+      return NextResponse.json({ error: "La contraseña debe tener al menos 4 caracteres." }, { status: 400 });
     }
     if (!isEmailFormat(email) || !isAllowedEmail(email)) {
       return NextResponse.json({ error: "Tu correo no pertenece a ninguna empresa autorizada." }, { status: 400 });
@@ -31,7 +34,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "La empresa seleccionada no es valida." }, { status: 400 });
     }
 
-    const passwordHash = rol === "ADMIN" ? await bcrypt.hash(ADMIN_PASSWORD, 12) : null;
+    const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
       data: {

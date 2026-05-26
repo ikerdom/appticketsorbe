@@ -74,14 +74,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: false, message: "Usuario desactivado" }, { status: 423 });
     }
 
-    if (user.rol === "ADMIN") {
-      if (!password || !user.passwordHash) {
-        return NextResponse.json({ ok: false, message: "Credenciales incorrectas" }, { status: 401 });
-      }
-      const valid = await bcrypt.compare(password, user.passwordHash);
-      if (!valid) {
-        return NextResponse.json({ ok: false, message: "Credenciales incorrectas" }, { status: 401 });
-      }
+    // Todos los usuarios deben tener contraseña configurada para entrar
+    if (!user.passwordHash) {
+      return NextResponse.json({ ok: false, message: "Tu cuenta no tiene contraseña. Pide al administrador que la configure." }, { status: 401 });
+    }
+    if (!password) {
+      return NextResponse.json({ ok: false, message: "Introduce tu contraseña." }, { status: 401 });
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return NextResponse.json({ ok: false, message: "Contraseña incorrecta." }, { status: 401 });
     }
 
     const session = await createSessionForUser({ id: user.id, rol: user.rol });
