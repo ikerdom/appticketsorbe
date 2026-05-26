@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { UserRound, X } from "lucide-react";
+import { Lock, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,10 @@ type FormData = z.infer<typeof nuevoTicketSchema>;
 interface NewTicketFormProps {
   empresas: { id: string; nombre: string; dominio: string; color: string | null }[];
   categoriasCustom: string[];
+  currentEmpresaId: string;
+  currentEmpresaNombre: string;
+  currentEmpresaColor: string | null;
+  isAdmin: boolean;
 }
 
 const BASE_CATEGORIAS = ["Técnico", "Administrativo", "Comercial", "RRHH", "Otros"];
@@ -40,7 +44,7 @@ function normalizeCategoriaToEnum(value: string): "TECNICO" | "ADMINISTRATIVO" |
   return "OTROS";
 }
 
-export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps) {
+export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, currentEmpresaNombre, currentEmpresaColor, isAdmin }: NewTicketFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +55,7 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
     defaultValues: {
       titulo: "",
       descripcion: "",
-      destinatarios: [],
+      destinatarios: isAdmin ? [] : [currentEmpresaId],
       personaAfectada: "",
       contactoNombre: "",
       contactoTelefono: "",
@@ -72,6 +76,7 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
   const allCategorias = useMemo(() => Array.from(new Set([...BASE_CATEGORIAS, ...categoriasCustom])), [categoriasCustom]);
 
   function toggleEmpresa(empresaId: string) {
+    if (!isAdmin && empresaId === currentEmpresaId) return; // bloqueada para usuarios normales
     const current = new Set(selectedDestinatarios);
     if (current.has(empresaId)) current.delete(empresaId);
     else current.add(empresaId);
@@ -155,18 +160,20 @@ export function NewTicketForm({ empresas, categoriasCustom }: NewTicketFormProps
               </button>
               {empresas.map((empresa) => {
                 const active = selectedDestinatarios.includes(empresa.id);
+                const locked = !isAdmin && empresa.id === currentEmpresaId;
                 return (
                   <button
                     key={empresa.id}
                     type="button"
                     onClick={() => toggleEmpresa(empresa.id)}
-                    className="rounded-full border px-4 py-2 text-sm font-medium transition"
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition ${locked ? "cursor-default" : ""}`}
                     style={{
                       backgroundColor: active ? empresa.color || "#334155" : "transparent",
                       color: active ? "#fff" : undefined,
                       borderColor: empresa.color || "#cbd5e1"
                     }}
                   >
+                    {locked && <Lock className="h-3 w-3 opacity-70" />}
                     {empresa.nombre}
                   </button>
                 );

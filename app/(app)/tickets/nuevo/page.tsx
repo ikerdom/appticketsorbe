@@ -4,6 +4,7 @@ import { NewTicketForm } from "@/components/tickets/new-ticket-form";
 
 export default async function NuevoTicketPage() {
   const user = await requireCurrentPageUser();
+  const isAdmin = user.rol === "ADMIN";
 
   const [empresas, categoriasCustom] = await Promise.all([
     prisma.empresa.findMany({
@@ -14,6 +15,15 @@ export default async function NuevoTicketPage() {
     prisma.ticketCategoriaCustom.findMany({ select: { nombre: true }, orderBy: { nombre: "asc" } })
   ]);
 
-  return <NewTicketForm empresas={empresas} categoriasCustom={categoriasCustom.map((item) => item.nombre)} />;
+  return (
+    <NewTicketForm
+      empresas={empresas}
+      categoriasCustom={categoriasCustom.map((item) => item.nombre)}
+      currentEmpresaId={user.empresaId}
+      currentEmpresaNombre={user.empresa.nombre}
+      currentEmpresaColor={user.empresa.color}
+      isAdmin={isAdmin}
+    />
+  );
 }
 
