@@ -153,7 +153,7 @@ export function AdminEmpresasPanel({
           <span>
             {selectedEmpresaId
               ? `Kanban · ${empresas.find((e) => e.id === selectedEmpresaId)?.nombre}`
-              : "Kanban · todas las empresas"}
+              : "Kanban"}
           </span>
           <div className="flex items-center gap-2">
             {selectedEmpresaId && (
