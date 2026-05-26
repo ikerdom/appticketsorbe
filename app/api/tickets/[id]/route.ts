@@ -5,7 +5,6 @@ import { puedeEditarTicket, puedeEliminarTicket, puedeVerTicket } from "@/lib/pe
 import { requireCurrentUser } from "@/lib/data";
 import { logTicketAction } from "@/lib/audit";
 import { sendTicketNotification } from "@/lib/notifications";
-import { EDIT_LOCK_TTL_MS } from "@/lib/realtime";
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -52,19 +51,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const activeLock = await prisma.ticketEdicion.findUnique({
-      where: { ticketId: params.id },
-      include: { usuario: { select: { email: true, nombre: true, name: true } } }
-    });
-    if (activeLock && activeLock.expiresAt > new Date() && activeLock.usuarioId !== user.id) {
-      return NextResponse.json(
-        {
-          error: `Este ticket está siendo editado por ${activeLock.usuario.nombre ?? activeLock.usuario.name ?? activeLock.usuario.email}.`
-        },
-        { status: 409 }
-      );
-    }
-
+    // Edición simultánea permitida — sin hard-lock (solo informativo)
     const body = await request.json();
     const data = editarTicketSchema.parse(body);
 
@@ -132,13 +119,6 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         autorId: user.id,
         accion: "TICKET_ASIGNADO",
         detalle: { asignadoId: updated.asignadoId }
-      });
-    }
-
-    if (activeLock?.usuarioId === user.id) {
-      await prisma.ticketEdicion.update({
-        where: { ticketId: params.id },
-        data: { expiresAt: new Date(Date.now() + EDIT_LOCK_TTL_MS) }
       });
     }
 

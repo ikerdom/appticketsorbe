@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Pencil, Phone, Save, Trash2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, Mail, Pencil, Phone, Save, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,9 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     categoria: ticket.categoria as string,
     categoriaCustom: ticket.categoriaCustom || ""
   });
+
+  // Edición de comentarios: { id: string; contenido: string } | null
+  const [editingComment, setEditingComment] = useState<{ id: string; contenido: string } | null>(null);
 
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
@@ -102,15 +105,22 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
-  function deleteComment(comentarioId: string) {
+  function saveComment(comentarioId: string, contenido: string) {
     startTransition(async () => {
-      const response = await fetch(`/api/tickets/${ticket.id}/comentarios/${comentarioId}`, { method: "DELETE" });
+      const response = await fetch(`/api/tickets/${ticket.id}/comentarios/${comentarioId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contenido })
+      });
       if (!response.ok) {
-        toast.error("No se pudo eliminar el comentario");
+        const body = await response.json().catch(() => ({ error: "No se pudo editar" }));
+        toast.error(body.error ?? "No se pudo editar");
         return;
       }
-      setComentarios((prev) => prev.filter((c) => c.id !== comentarioId));
-      toast.success("Comentario eliminado");
+      const { comentario: updated } = await response.json();
+      setComentarios((prev) => prev.map((c) => c.id === comentarioId ? { ...c, contenido: updated.contenido } : c));
+      setEditingComment(null);
+      toast.success("Comentario editado");
     });
   }
 
@@ -300,27 +310,60 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 {comentarios.map((item) => {
                   const isOwn = item.autor.id === currentUserId;
                   const autorName = item.autor.nombre || item.autor.name || item.autor.email;
+                  const isEditing = editingComment?.id === item.id;
+                  const canEdit = isAdmin || item.autor.id === currentUserId;
                   return (
                     <div key={item.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
-                      <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isOwn ? "rounded-br-sm bg-indigo-600 text-white" : "rounded-bl-sm bg-slate-100 text-slate-800"}`}>
-                        {!isOwn && (
-                          <p className="mb-1 text-xs font-semibold text-indigo-700">{autorName}</p>
-                        )}
-                        <p className="whitespace-pre-wrap leading-relaxed">{item.contenido}</p>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-2 px-1">
-                        <span className="text-[10px] text-muted-foreground">{formatDateTimeEs(item.createdAt)}</span>
-                        {(isAdmin || item.autor.id === currentUserId) ? (
-                          <button
-                            type="button"
-                            onClick={() => deleteComment(item.id)}
-                            className="rounded p-0.5 text-slate-300 hover:text-red-400"
-                            title="Eliminar mensaje"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        ) : null}
-                      </div>
+                      {isEditing ? (
+                        <div className="w-full max-w-[90%] space-y-1.5">
+                          <Textarea
+                            value={editingComment.contenido}
+                            onChange={(e) => setEditingComment(prev => prev ? { ...prev, contenido: e.target.value } : null)}
+                            rows={3}
+                            className="text-sm"
+                            autoFocus
+                          />
+                          <div className="flex gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => saveComment(item.id, editingComment.contenido)}
+                              disabled={isPending}
+                              className="inline-flex items-center gap-1 rounded-md bg-indigo-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                            >
+                              <Check className="h-3 w-3" />Guardar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingComment(null)}
+                              className="inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                            >
+                              <X className="h-3 w-3" />Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isOwn ? "rounded-br-sm bg-indigo-600 text-white" : "rounded-bl-sm bg-slate-100 text-slate-800"}`}>
+                            {!isOwn && (
+                              <p className="mb-1 text-xs font-semibold text-indigo-700">{autorName}</p>
+                            )}
+                            <p className="whitespace-pre-wrap leading-relaxed">{item.contenido}</p>
+                          </div>
+                          <div className="mt-0.5 flex items-center gap-2 px-1">
+                            <span className="text-[10px] text-muted-foreground">{formatDateTimeEs(item.createdAt)}</span>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={() => setEditingComment({ id: item.id, contenido: item.contenido })}
+                                className="rounded p-0.5 text-slate-300 hover:text-indigo-500"
+                                title="Editar mensaje"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })}
