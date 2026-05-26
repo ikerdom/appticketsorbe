@@ -311,9 +311,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 <p className="text-xs text-muted-foreground">Horas dedicadas: {ticket.horasDedicadas}h</p>
               ) : null}
               {ticket.notaResolucion ? (
-                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2.5">
-                  <p className="mb-1 text-xs font-semibold text-emerald-700">Cómo se resolvió</p>
-                  <p className="whitespace-pre-wrap text-xs text-emerald-800">{ticket.notaResolucion}</p>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                  <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-700">
+                    📖 Cómo se resolvió
+                  </p>
+                  <p className="whitespace-pre-wrap text-sm text-emerald-900 leading-relaxed">{ticket.notaResolucion}</p>
+                </div>
+              ) : ticket.estado === "RESUELTO" ? (
+                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 text-center">
+                  <p className="text-xs text-slate-400">Sin solución documentada</p>
                 </div>
               ) : null}
 
@@ -324,19 +330,23 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               ) : null}
 
               {canResolve ? (
-                <div className="space-y-2 rounded-lg border border-dashed p-3">
-                  <p className="text-xs font-semibold text-slate-600">Resolver ticket</p>
+                <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Marcar como resuelto</p>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">¿Cómo se resolvió? (opcional)</label>
+                    <label className="text-xs font-medium text-emerald-800">
+                      📖 ¿Cómo se solucionó?{" "}
+                      <span className="font-normal text-emerald-600">(recomendado — queda en el histórico)</span>
+                    </label>
                     <Textarea
-                      rows={3}
-                      placeholder="Describe qué hiciste para solucionarlo…"
+                      rows={4}
+                      placeholder={"Explica qué pasos seguiste para resolverlo.\nEjemplo: «Se reinició el servicio de correo en el servidor. Causa: cuota llena.»\nAsí la próxima vez será fácil."}
                       value={notaResolucion}
                       onChange={(e) => setNotaResolucion(e.target.value)}
+                      className="bg-white text-sm"
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs text-muted-foreground">Horas dedicadas (opcional)</label>
+                    <label className="text-xs font-medium text-emerald-800">⏱ Horas dedicadas <span className="font-normal text-emerald-600">(opcional)</span></label>
                     <Input
                       type="number"
                       min="0"
@@ -344,10 +354,11 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                       placeholder="ej: 2.5"
                       value={horasDedicadas}
                       onChange={(e) => setHorasDedicadas(e.target.value)}
+                      className="bg-white"
                     />
                   </div>
                   <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion || undefined })}>
-                    Marcar resuelto
+                    ✓ Marcar resuelto
                   </Button>
                 </div>
               ) : (

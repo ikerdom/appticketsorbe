@@ -24,8 +24,10 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
   const empresa = asString(searchParams.empresa) || "";
   const prioridad = asString(searchParams.prioridad) || "";
   const categoria = asString(searchParams.categoria) || "";
+  const soloConSolucion = asString(searchParams.soloConSolucion) === "1";
 
   const and: Prisma.TicketWhereInput[] = [{ estado: "RESUELTO", archivadoAt: null }];
+  if (soloConSolucion) and.push({ notaResolucion: { not: null } });
   if (empresa) and.push({ destinos: { some: { empresaId: empresa } } });
   if (prioridad) and.push({ prioridad: prioridad as any });
   if (categoria) {
@@ -35,7 +37,11 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
   }
   if (q) {
     and.push({
-      OR: [{ titulo: { contains: q, mode: "insensitive" } }, { descripcion: { contains: q, mode: "insensitive" } }]
+      OR: [
+        { titulo: { contains: q, mode: "insensitive" } },
+        { descripcion: { contains: q, mode: "insensitive" } },
+        { notaResolucion: { contains: q, mode: "insensitive" } }
+      ]
     });
   }
 
@@ -72,7 +78,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
       </div>
 
       <form className="grid gap-3 rounded-2xl border bg-card p-3 md:grid-cols-4">
-        <input name="q" defaultValue={q} placeholder="Buscar título o descripción" className="h-10 rounded-md border px-3 text-sm" />
+        <input name="q" defaultValue={q} placeholder="Buscar título, descripción o solución…" className="h-10 rounded-md border px-3 text-sm" />
         <select name="empresa" defaultValue={empresa} className="h-10 rounded-md border px-3 text-sm">
           <option value="">Empresa</option>
           {empresas.map((item) => (
@@ -89,7 +95,11 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
           <option value="CRITICA">CRÍTICA</option>
         </select>
         <input name="categoria" defaultValue={categoria} placeholder="Categoría" className="h-10 rounded-md border px-3 text-sm" />
-        <button className="h-10 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground md:col-span-4" type="submit">
+        <label className="flex items-center gap-2 text-sm text-slate-600 md:col-span-2">
+          <input type="checkbox" name="soloConSolucion" value="1" defaultChecked={soloConSolucion} className="h-4 w-4 rounded border-slate-300 accent-emerald-600" />
+          Solo tickets con solución documentada
+        </label>
+        <button className="h-10 rounded-md bg-primary px-3 text-sm font-medium text-primary-foreground md:col-span-2" type="submit">
           Aplicar filtros
         </button>
       </form>
@@ -97,6 +107,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
       <HistoricoTable
         items={tickets.map((ticket) => ({
           ...ticket,
+          notaResolucion: ticket.notaResolucion ?? null,
           resueltoAt: ticket.resueltoAt?.toISOString() ?? null,
           createdAt: ticket.createdAt.toISOString(),
           updatedAt: ticket.updatedAt.toISOString()
