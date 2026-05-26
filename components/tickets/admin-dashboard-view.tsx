@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { AlertCircle, BarChart3, Clock3, Download, Layers3, Timer, Zap, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AlertCircle, BarChart3, BookOpen, Clock3, Download, Layers3, Timer, Zap, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDateTimeEs } from "@/lib/dates";
@@ -15,7 +15,7 @@ interface MetricData {
   origen: { nombre: string; total: number }[];
   destino: { nombre: string; total: number }[];
   prioridad: { prioridad: string; total: number }[];
-  trend: { fecha: string; total: number }[];
+  trend: { fecha: string; creados: number; resueltos: number }[];
   topCategorias: { categoria: string; total: number }[];
   sinAsignar: {
     id: string;
@@ -34,6 +34,8 @@ interface MetricData {
     avgResolucionHoras: number | null;
     slaOkPct: number | null;
     slaBreachCount: number;
+    conSolucionCount: number;
+    conSolucionPct: number;
   };
 }
 
@@ -75,7 +77,7 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
       {data.timingStats && (
         <div>
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Tiempos · SLA</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <Card className="rounded-2xl">
               <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><Zap className="h-4 w-4 text-amber-500" />1ª respuesta media</CardTitle></CardHeader>
               <CardContent>
@@ -96,14 +98,23 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
                 <p className="text-2xl font-bold text-emerald-600">
                   {data.timingStats.slaOkPct !== null ? `${Math.round(data.timingStats.slaOkPct)}%` : "—"}
                 </p>
-                <p className="text-xs text-muted-foreground">Resueltos en &lt;72h</p>
+                <p className="text-xs text-muted-foreground">Resueltos en &lt;72h · {data.timingStats.slaBreachCount} incumplidos</p>
               </CardContent>
             </Card>
-            <Card className="rounded-2xl">
-              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4 text-red-500" />SLA incumplido</CardTitle></CardHeader>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Card className="rounded-2xl border-emerald-100 bg-emerald-50/40">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><BookOpen className="h-4 w-4 text-emerald-600" />Soluciones documentadas</CardTitle></CardHeader>
               <CardContent>
-                <p className="text-2xl font-bold text-red-600">{data.timingStats.slaBreachCount}</p>
-                <p className="text-xs text-muted-foreground">Resueltos en +72h</p>
+                <p className="text-2xl font-bold text-emerald-700">{data.timingStats.conSolucionCount} <span className="text-base font-medium text-emerald-500">({data.timingStats.conSolucionPct}%)</span></p>
+                <p className="text-xs text-muted-foreground">Tickets resueltos con "cómo se resolvió" escrito · Base de conocimiento</p>
+              </CardContent>
+            </Card>
+            <Card className="rounded-2xl border-red-100 bg-red-50/40">
+              <CardHeader className="pb-2"><CardTitle className="flex items-center gap-2 text-sm"><ShieldAlert className="h-4 w-4 text-red-500" />Sin documentar</CardTitle></CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-red-600">{data.estado.RESUELTO - data.timingStats.conSolucionCount} <span className="text-base font-medium text-red-400">({100 - data.timingStats.conSolucionPct}%)</span></p>
+                <p className="text-xs text-muted-foreground">Resueltos sin nota de resolución · Anima al equipo a documentar</p>
               </CardContent>
             </Card>
           </div>
@@ -171,7 +182,7 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Evolución temporal ({data.range} días)</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Evolución temporal ({data.range} días) · creados vs resueltos</CardTitle></CardHeader>
           <CardContent className="h-72">
             {data.trend.length === 0 ? (
               <EmptyChart message="Aún no hay tickets en este periodo." />
@@ -179,10 +190,12 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data.trend}>
                   <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="fecha" />
+                  <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
                   <YAxis allowDecimals={false} />
                   <Tooltip />
-                  <Area dataKey="total" stroke="#0ea5a4" fill="#99f6e4" />
+                  <Legend />
+                  <Area dataKey="creados" name="Creados" stroke="#6366f1" fill="#e0e7ff" strokeWidth={2} />
+                  <Area dataKey="resueltos" name="Resueltos" stroke="#10b981" fill="#d1fae5" strokeWidth={2} />
                 </AreaChart>
               </ResponsiveContainer>
             )}
@@ -213,12 +226,28 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
         </Card>
 
         <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Tiempo medio de resolución</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p><strong>Global:</strong> {data.avgGlobalHoras.toFixed(2)} horas</p>
-            {data.avgPorEmpresa.map((item) => (
-              <p key={item.empresa}><strong>{item.empresa}:</strong> {item.horas.toFixed(2)} horas</p>
-            ))}
+          <CardHeader>
+            <CardTitle>Tiempo medio de resolución por empresa (h)</CardTitle>
+            <p className="text-xs text-muted-foreground">Global: {data.avgGlobalHoras.toFixed(1)}h · Referencia SLA: 72h</p>
+          </CardHeader>
+          <CardContent className="h-64">
+            {data.avgPorEmpresa.length === 0 ? (
+              <EmptyChart message="Sin datos de resolución en este periodo." />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.avgPorEmpresa} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" allowDecimals={false} unit="h" />
+                  <YAxis type="category" dataKey="empresa" width={80} tick={{ fontSize: 12 }} />
+                  <Tooltip formatter={(v) => [`${Number(v).toFixed(1)}h`, "Resolución media"]} />
+                  <Bar dataKey="horas" name="Horas" radius={[0, 4, 4, 0]}>
+                    {data.avgPorEmpresa.map((item) => (
+                      <Cell key={item.empresa} fill={item.horas > 72 ? "#dc2626" : item.horas > 48 ? "#f97316" : "#16a34a"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </CardContent>
         </Card>
       </div>

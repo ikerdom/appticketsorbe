@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
       "asignado",
       "fecha_creacion",
       "fecha_resolucion",
+      "horas_dedicadas",
+      "como_se_resolvio",
       "num_comentarios"
     ];
 
@@ -100,6 +102,8 @@ export async function GET(request: NextRequest) {
           t.asignado ? t.asignado.nombre || t.asignado.name || t.asignado.email : "",
           t.createdAt.toISOString(),
           t.resueltoAt?.toISOString() || "",
+          t.horasDedicadas ?? "",
+          t.notaResolucion || "",
           t._count.comentarios
         ]
           .map(csvEscape)

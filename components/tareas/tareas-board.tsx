@@ -83,7 +83,7 @@ function TareaCard({
 }) {
   const [, startTransition] = useTransition();
   const canDelete = isAdmin;
-  const canEdit = isAdmin || tarea.empresaId === tarea.empresaId;
+  const canEdit = isAdmin || tarea.creadorId === currentUserId;
 
   function moveEstado(estado: TareaEstado) {
     startTransition(async () => {

@@ -24,7 +24,7 @@ export default async function AdminDashboardPage({
   });
   const empresaMap = new Map(empresas.map((empresa) => [empresa.id, empresa.nombre]));
 
-  const [estadoGroup, prevEstadoGroup, origenGroup, destinoGroup, topCategoriasEnum, topCategoriasCustom, resueltos, sinAsignar, ticketsTrend, prioridadGroup] =
+  const [estadoGroup, prevEstadoGroup, origenGroup, destinoGroup, topCategoriasEnum, topCategoriasCustom, resueltos, sinAsignar, ticketsTrend, ticketsResueltosTrend, conSolucionCount, prioridadGroup] =
     await Promise.all([
       prisma.ticket.groupBy({ by: ["estado"], where: { archivadoAt: null, createdAt: { gte: from } }, _count: { estado: true } }),
       prisma.ticket.groupBy({ by: ["estado"], where: { archivadoAt: null, createdAt: { gte: previousFrom, lt: from } }, _count: { estado: true } }),
@@ -71,6 +71,13 @@ export default async function AdminDashboardPage({
       prisma.ticket.findMany({
         where: { archivadoAt: null, createdAt: { gte: from } },
         select: { createdAt: true }
+      }),
+      prisma.ticket.findMany({
+        where: { archivadoAt: null, resueltoAt: { gte: from, not: null } },
+        select: { resueltoAt: true }
+      }),
+      prisma.ticket.count({
+        where: { archivadoAt: null, estado: "RESUELTO", notaResolucion: { not: null } }
       }),
       prisma.ticket.groupBy({
         by: ["prioridad"],
@@ -141,14 +148,21 @@ export default async function AdminDashboardPage({
     .sort((a, b) => b.total - a.total)
     .slice(0, 5);
 
-  const trendMap = new Map<string, number>();
+  const trendCreados = new Map<string, number>();
   for (const ticket of ticketsTrend) {
     const key = ticket.createdAt.toISOString().slice(0, 10);
-    trendMap.set(key, (trendMap.get(key) ?? 0) + 1);
+    trendCreados.set(key, (trendCreados.get(key) ?? 0) + 1);
   }
-  const trend = Array.from(trendMap.entries())
-    .sort(([a], [b]) => (a < b ? -1 : 1))
-    .map(([fecha, total]) => ({ fecha, total }));
+  const trendResueltos = new Map<string, number>();
+  for (const ticket of ticketsResueltosTrend) {
+    if (!ticket.resueltoAt) continue;
+    const key = new Date(ticket.resueltoAt).toISOString().slice(0, 10);
+    trendResueltos.set(key, (trendResueltos.get(key) ?? 0) + 1);
+  }
+  const allDays = new Set([...trendCreados.keys(), ...trendResueltos.keys()]);
+  const trend = Array.from(allDays)
+    .sort()
+    .map((fecha) => ({ fecha, creados: trendCreados.get(fecha) ?? 0, resueltos: trendResueltos.get(fecha) ?? 0 }));
 
   const exportQuery = new URLSearchParams(
     Object.entries(searchParams).filter(([, value]) => typeof value === "string") as [string, string][]
@@ -180,7 +194,14 @@ export default async function AdminDashboardPage({
           })),
           avgGlobalHoras,
           avgPorEmpresa,
-          timingStats: { avgRespuestaHoras, avgResolucionHoras, slaOkPct, slaBreachCount },
+          timingStats: {
+            avgRespuestaHoras,
+            avgResolucionHoras,
+            slaOkPct,
+            slaBreachCount,
+            conSolucionCount,
+            conSolucionPct: estado.RESUELTO > 0 ? Math.round((conSolucionCount / estado.RESUELTO) * 100) : 0
+          },
           exportQuery,
           empresas,
           range

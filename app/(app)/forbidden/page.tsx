@@ -11,9 +11,6 @@ export default function ForbiddenPage() {
       <p className="text-sm font-semibold text-red-600">403</p>
       <h1 className="mt-2 text-2xl font-bold">No autorizado</h1>
       <p className="mt-3 text-sm text-muted-foreground">
-        No tienes permiso para ver esta sección.
-      </p>
-      <p className="mt-2 text-sm text-muted-foreground">
         No tienes permiso para acceder a esta sección. Si crees que es un error, contacta con un administrador.
       </p>
       <Link href="/" className="mt-6 inline-block rounded-md border px-4 py-2 text-sm">
