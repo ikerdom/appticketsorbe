@@ -7,8 +7,7 @@ export default async function NuevoTicketPage() {
 
   const [empresas, categoriasCustom] = await Promise.all([
     prisma.empresa.findMany({
-      // Excluir la propia empresa del usuario — el origen ya es automáticamente la suya
-      where: { isActive: true, isGlobalTarget: false, deletedAt: null, NOT: { id: user.empresaId } },
+      where: { isActive: true, isGlobalTarget: false, deletedAt: null },
       select: { id: true, nombre: true, dominio: true, color: true },
       orderBy: { nombre: "asc" }
     }),
