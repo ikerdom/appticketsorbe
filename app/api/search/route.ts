@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
       empresas,
       navigation: [
         { id: "home", label: "Ir al tablero", href: "/" },
-        { id: "new", label: "Crear incidencia", href: "/tickets/nuevo" },
+        { id: "new", label: "Crear ticket", href: "/tickets/nuevo" },
         ...(user.rol === "ADMIN"
           ? [
               { id: "admin-users", label: "Admin · Usuarios", href: "/admin/usuarios" },

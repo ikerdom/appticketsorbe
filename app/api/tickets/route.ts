@@ -164,7 +164,7 @@ export async function POST(request: NextRequest) {
       ticketId: ticket.id,
       ticketNumero: ticket.numero,
       titulo: ticket.titulo,
-      mensaje: "Se ha creado un nuevo ticket de incidencia."
+      mensaje: "Se ha creado un nuevo ticket."
     });
 
     return NextResponse.json({ ticket }, { status: 201 });

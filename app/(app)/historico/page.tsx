@@ -65,7 +65,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Histórico de incidencias resueltas</h1>
+        <h1 className="text-2xl font-bold">Histórico de tickets resueltos</h1>
         <Link className="rounded-md border px-3 py-2 text-sm" href={`/api/admin/export?${params.toString()}`}>
           Exportar CSV
         </Link>

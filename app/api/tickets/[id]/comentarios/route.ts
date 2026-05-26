@@ -54,7 +54,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       ticketId: ticket.id,
       ticketNumero: ticket.numero,
       titulo: ticket.titulo,
-      mensaje: "Se ha añadido un nuevo comentario a la incidencia."
+      mensaje: "Se ha añadido un nuevo comentario al ticket."
     });
 
     return NextResponse.json({ comentario }, { status: 201 });

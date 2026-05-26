@@ -5,5 +5,5 @@
 }
 
 export function incidenciaNotificationText({ ticketNumero, titulo, mensaje }: NotificationTemplateInput) {
-  return `[Incidencia #${String(ticketNumero).padStart(3, "0")}] ${titulo} · ${mensaje}`;
+  return `[Ticket #${String(ticketNumero).padStart(3, "0")}] ${titulo} · ${mensaje}`;
 }

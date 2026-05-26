@@ -4,7 +4,7 @@ import { requireCurrentPageUser } from "@/lib/data";
 import { TareasBoard } from "@/components/tareas/tareas-board";
 
 export const metadata: Metadata = {
-  title: "Tickets · Incidencia"
+  title: "Tickets internos"
 };
 
 export default async function TareasPage() {

@@ -5,10 +5,10 @@ import { PwaRegister } from "@/components/layout/pwa-register";
 
 export const metadata: Metadata = {
   title: {
-    template: "Incidencia - %s",
-    default: "Incidencia - Tickets de Incidencia"
+    template: "Tickets - %s",
+    default: "Tickets - Gestión de Tickets"
   },
-  description: "Sistema de tickets de incidencias multiempresa",
+  description: "Sistema de tickets multiempresa",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon.svg",

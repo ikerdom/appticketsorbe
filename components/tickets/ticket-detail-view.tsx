@@ -185,38 +185,58 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               <CardTitle>Conversación</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <details className="rounded-lg border p-3" open>
-                <summary className="cursor-pointer text-sm font-medium">Ver mensajes ({comentarios.length})</summary>
-                <div className="mt-3 space-y-3">
-                  {comentarios.length === 0 ? <p className="text-sm text-muted-foreground">Sin mensajes todavía.</p> : null}
-                  {comentarios.map((item) => (
-                    <div key={item.id} className="rounded-lg border p-3 text-sm">
-                      <div className="mb-1 flex items-center justify-between gap-2">
-                        <p className="text-xs text-muted-foreground">
-                          {item.autor.email} · {formatDateTimeEs(item.createdAt)}
-                        </p>
+              <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1">
+                {comentarios.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Sin mensajes todavía. Sé el primero en comentar.</p>
+                ) : null}
+                {comentarios.map((item) => {
+                  const isOwn = item.autor.id === currentUserId;
+                  const autorName = item.autor.nombre || item.autor.name || item.autor.email;
+                  return (
+                    <div key={item.id} className={`flex flex-col ${isOwn ? "items-end" : "items-start"}`}>
+                      <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm ${isOwn ? "rounded-br-sm bg-indigo-600 text-white" : "rounded-bl-sm bg-slate-100 text-slate-800"}`}>
+                        {!isOwn && (
+                          <p className="mb-1 text-xs font-semibold text-indigo-700">{autorName}</p>
+                        )}
+                        <p className="whitespace-pre-wrap leading-relaxed">{item.contenido}</p>
+                      </div>
+                      <div className="mt-0.5 flex items-center gap-2 px-1">
+                        <span className="text-[10px] text-muted-foreground">{formatDateTimeEs(item.createdAt)}</span>
                         {(isAdmin || item.autor.id === currentUserId) ? (
                           <button
                             type="button"
                             onClick={() => deleteComment(item.id)}
-                            className="rounded p-1 text-slate-400 hover:bg-red-50 hover:text-red-500"
+                            className="rounded p-0.5 text-slate-300 hover:text-red-400"
                             title="Eliminar mensaje"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         ) : null}
                       </div>
-                      <p className="whitespace-pre-wrap">{item.contenido}</p>
                     </div>
-                  ))}
-                </div>
-              </details>
+                  );
+                })}
+              </div>
 
               <div className="space-y-2 border-t pt-3">
-                <Input value={comment} onChange={(event) => setComment(event.target.value)} placeholder="Añadir comentario..." />
-                <Button onClick={addComment} disabled={isPending}>
-                  {isPending ? "Enviando..." : "Publicar comentario"}
-                </Button>
+                <Textarea
+                  value={comment}
+                  onChange={(event) => setComment(event.target.value)}
+                  placeholder="Escribe un mensaje..."
+                  rows={3}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                      e.preventDefault();
+                      addComment();
+                    }
+                  }}
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Ctrl+Enter para enviar</span>
+                  <Button onClick={addComment} disabled={isPending || !comment.trim()}>
+                    {isPending ? "Enviando..." : "Enviar"}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -327,7 +347,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                     />
                   </div>
                   <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion || undefined })}>
-                    Marcar resuelta
+                    Marcar resuelto
                   </Button>
                 </div>
               ) : (

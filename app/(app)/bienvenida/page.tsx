@@ -15,7 +15,7 @@ const secciones = [
   {
     titulo: "🎫 Cómo crear un ticket",
     texto:
-      "Pulsa '+ Nuevo ticket de incidencia'. Lo más importante es elegir bien a qué empresa va dirigida la incidencia. Describe el problema con claridad."
+      "Pulsa '+ Nuevo ticket'. Lo más importante es elegir bien a qué empresa va dirigida. Describe el problema con claridad."
   },
   {
     titulo: "🏢 A quién se manda",
@@ -44,7 +44,7 @@ export default function BienvenidaPage() {
     <section className="space-y-4">
       <BienvenidaMarkSeen />
       <h1 className="text-2xl font-bold">Guía de uso</h1>
-      <p className="text-sm text-muted-foreground">Referencia rápida para trabajar con Tickets de Incidencia.</p>
+      <p className="text-sm text-muted-foreground">Referencia rápida para trabajar con tickets.</p>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {secciones.map((seccion) => (

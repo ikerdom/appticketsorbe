@@ -125,7 +125,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-500 shadow-xl shadow-indigo-500/30">
             <Zap className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Incidencia</h1>
+          <h1 className="text-3xl font-bold text-white">Tickets</h1>
           <p className="mt-1.5 text-sm text-slate-400">Plataforma de gestión de tickets del grupo</p>
           <div className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-500">
             <span className="rounded-full bg-slate-800 px-2.5 py-1">EnteNova</span>

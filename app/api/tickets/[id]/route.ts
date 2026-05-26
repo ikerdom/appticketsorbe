@@ -125,7 +125,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         ticketId: updated.id,
         ticketNumero: updated.numero,
         titulo: updated.titulo,
-        mensaje: "Se te ha asignado esta incidencia."
+        mensaje: "Se te ha asignado este ticket."
       });
       await logTicketAction({
         ticketId: updated.id,
