@@ -6,11 +6,12 @@ export const CORPORATE_DOMAINS = [
   "veprix.com"
 ] as const;
 
-export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com", "grupocep.es"] as const;
+export const LEGACY_DOMAINS = ["bn-tic.es", "orbeformacion.com", "entenova-gnosis.com", "grupocep.es", "grupocep.eu"] as const;
 
 const DOMAIN_TO_EMPRESA: Record<string, string> = {
   "editorialcep.com": "Editorial CEP",
   "grupocep.es": "Editorial CEP",
+  "grupocep.eu": "Editorial CEP",
   "entenova.com": "Entenova",
   "entenova.gnosis.com": "Entenova",
   "entenova-gnosis.com": "Entenova",
