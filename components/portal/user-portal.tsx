@@ -19,6 +19,7 @@ interface PortalTicket {
   updatedAt: Date | string;
   unread: boolean;
   empresaOrigen: { nombre: string; color: string | null };
+  creador: { nombre: string | null; name: string | null; email: string };
   _count: { comentarios: number };
 }
 
@@ -245,7 +246,9 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
       <p className={`line-clamp-2 text-sm font-semibold leading-snug ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
         {ticket.titulo}
       </p>
-      <p className="mt-1 text-[10px] text-slate-400">{formatRelativeEs(ticket.updatedAt)}</p>
+      <p className="mt-1 text-[10px] text-slate-400">
+        {ticket.creador.nombre ?? ticket.creador.name ?? ticket.creador.email} · {formatRelativeEs(ticket.updatedAt)}
+      </p>
     </Link>
   );
 }

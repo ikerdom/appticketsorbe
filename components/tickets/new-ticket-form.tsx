@@ -84,15 +84,14 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   }
 
   function toggleTodas() {
-    if (selectedDestinatarios.length === empresas.length) {
-      form.setValue("destinatarios", [], { shouldValidate: true });
+    const allSelected = empresas.every((e) => selectedDestinatarios.includes(e.id));
+    if (allSelected) {
+      // Al deseleccionar todo, mantener la empresa bloqueada si es usuario normal
+      const keep = isAdmin ? [] : [currentEmpresaId];
+      form.setValue("destinatarios", keep, { shouldValidate: true });
       return;
     }
-    form.setValue(
-      "destinatarios",
-      empresas.map((empresa) => empresa.id),
-      { shouldValidate: true }
-    );
+    form.setValue("destinatarios", empresas.map((e) => e.id), { shouldValidate: true });
   }
 
   const onSubmit = form.handleSubmit((values) => {
