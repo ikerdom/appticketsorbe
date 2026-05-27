@@ -89,28 +89,30 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       data
     });
 
-    await logTicketAction({
+    // Audit + notifications are non-blocking — don't fail the request if they error
+    logTicketAction({
       ticketId: updated.id,
       autorId: user.id,
       accion: accionHistorial,
       detalle
-    });
+    }).catch((err) => console.error("[audit]", err));
 
     const recipients = new Set<string>();
     if (ticket.creadorId !== user.id) recipients.add(ticket.creadorId);
     if (updated.asignadoId && updated.asignadoId !== user.id) recipients.add(updated.asignadoId);
 
-    await sendTicketNotification({
+    sendTicketNotification({
       toUserIds: Array.from(recipients),
       tipo: "estado_cambiado",
       ticketId: updated.id,
       ticketNumero: updated.numero,
       titulo: updated.titulo,
       mensaje: `El estado del ticket ha cambiado a ${updated.estado.replace("_", " ")}.`
-    });
+    }).catch((err) => console.error("[notify]", err));
 
     return NextResponse.json({ ticket: updated });
-  } catch {
+  } catch (err) {
+    console.error("[estado route]", err);
     return NextResponse.json({ error: "No se pudo cambiar el estado" }, { status: 400 });
   }
 }

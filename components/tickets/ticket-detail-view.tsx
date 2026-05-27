@@ -64,8 +64,10 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     contactoNotas: ticket.contactoNotas || ""
   });
 
+  const [currentEstado, setCurrentEstado] = useState(ticket.estado);
+
   const destinos = useMemo(() => ticket.destinos.filter((item) => !item.empresa.isGlobalTarget), [ticket.destinos]);
-  const canResolve = ticket.estado !== "RESUELTO";
+  const canResolve = currentEstado !== "RESUELTO";
 
   useEffect(() => {
     const onEsc = (event: KeyboardEvent) => {
@@ -93,6 +95,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
       toast.error(body.error ?? "No se pudo ejecutar la acción.");
       return;
     }
+    const { ticket: updated } = await response.json();
+    setCurrentEstado(updated.estado);
     toast.success("Ticket actualizado");
     router.refresh();
   }
@@ -250,7 +254,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {isAdmin && ticket.estado !== "RESUELTO" && (
+          {isAdmin && currentEstado !== "RESUELTO" && (
             editingTicket ? (
               <div className="flex gap-1">
                 <Button size="sm" onClick={saveEdicion} disabled={isPending}>
@@ -552,7 +556,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 </div>
               ) : null}
 
-              {isAdmin && ticket.estado !== "EN_CURSO" && ticket.estado !== "RESUELTO" ? (
+              {isAdmin && currentEstado !== "EN_CURSO" && currentEstado !== "RESUELTO" ? (
                 <Button className="w-full" onClick={() => void performAction("take")}>
                   Marcar en curso
                 </Button>
