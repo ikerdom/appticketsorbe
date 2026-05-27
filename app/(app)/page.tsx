@@ -4,7 +4,7 @@ import { requireCurrentPageUser, visibleTicketWhere } from "@/lib/data";
 import { AdminEmpresasPanel } from "@/components/layout/admin-empresas-panel";
 import { UserPortal } from "@/components/portal/user-portal";
 import { ticketUnreadMap } from "@/lib/lecturas";
-import { autoCloseStaleTickets, autoArchiveResolvedTickets } from "@/lib/auto-close";
+import { autoArchiveResolvedTickets } from "@/lib/auto-close";
 
 export const metadata: Metadata = {
   title: "Tickets"
@@ -14,11 +14,11 @@ export default async function DashboardPage() {
   const user = await requireCurrentPageUser();
   const isAdmin = user.rol === "ADMIN";
 
-  // Auto-maintenance: close stale tickets (48h inactivity) + archive old resolved (7d)
+  // Auto-archive: resolved tickets older than 7 days → histórico
   try {
-    await Promise.all([autoCloseStaleTickets(), autoArchiveResolvedTickets()]);
+    await autoArchiveResolvedTickets();
   } catch (e) {
-    console.error("[auto-maintenance]", e);
+    console.error("[auto-archive]", e);
   }
 
   const [tickets, empresas, usuarios, tareas, totalTicketsAdmin] = await Promise.all([

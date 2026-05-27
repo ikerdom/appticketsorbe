@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { autoCloseStaleTickets, autoArchiveResolvedTickets } from "@/lib/auto-close";
+import { autoArchiveResolvedTickets } from "@/lib/auto-close";
 
 // Vercel cron: runs daily at 08:00 UTC
 // Configured in vercel.json
@@ -11,11 +11,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const [closed, archived] = await Promise.all([
-      autoCloseStaleTickets(),
-      autoArchiveResolvedTickets()
-    ]);
-    return NextResponse.json({ ok: true, closed, archived });
+    const archived = await autoArchiveResolvedTickets();
+    return NextResponse.json({ ok: true, archived });
   } catch (err) {
     console.error("Maintenance cron error:", err);
     return NextResponse.json({ error: "Maintenance failed" }, { status: 500 });
