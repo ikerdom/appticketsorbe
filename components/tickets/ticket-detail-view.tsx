@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Mail, Pencil, Phone, Save, UserRound, X } from "lucide-react";
+import { ArrowLeft, ImagePlus, Mail, Pencil, Phone, Save, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -51,6 +51,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   // Edición de comentarios: { id: string; contenido: string } | null
   const conversacionRef = useRef<HTMLDivElement>(null);
 
+  const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -110,6 +112,45 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
       setComment("");
       toast.success("Comentario añadido");
     });
+  }
+
+  async function handleImagePaste(e: React.ClipboardEvent) {
+    const imageItems = Array.from(e.clipboardData.items).filter((i) => i.type.startsWith("image/"));
+    if (!imageItems.length) return;
+    e.preventDefault();
+    setUploadingImage(true);
+    for (const item of imageItems) {
+      const file = item.getAsFile();
+      if (!file) continue;
+      const reader = new FileReader();
+      await new Promise<void>((resolve) => {
+        reader.onload = async (ev) => {
+          const dataUrl = ev.target?.result as string;
+          const base64 = dataUrl.split(",")[1];
+          const filename = `screenshot-${Date.now()}.png`;
+          try {
+            const res = await fetch(`/api/tickets/${ticket.id}/adjuntos`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ filename, tipo: file.type || "image/png", base64 })
+            });
+            if (res.ok) {
+              const { adjuntos: [adj] } = await res.json();
+              setAdjuntos((prev) => [...prev, adj]);
+              toast.success("Imagen adjuntada");
+            } else {
+              const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
+              toast.error(body.error ?? "Error al subir imagen");
+            }
+          } catch {
+            toast.error("Error al subir imagen");
+          }
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    setUploadingImage(false);
   }
 
   async function deleteTicket() {
@@ -323,11 +364,26 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 })}
               </div>
 
+              {adjuntos.filter((a) => a.tipo.startsWith("image/")).length > 0 && (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {adjuntos.filter((a) => a.tipo.startsWith("image/")).map((adj) => (
+                    <a key={adj.id} href={adj.url} target="_blank" rel="noopener noreferrer" className="group relative block">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={adj.url}
+                        alt={adj.nombre}
+                        className="h-24 w-auto max-w-[200px] rounded-lg border object-cover shadow-sm transition group-hover:opacity-80"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
+
               <div className="space-y-2 border-t pt-3">
                 <Textarea
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
-                  placeholder="Escribe un mensaje..."
+                  placeholder="Escribe un mensaje… o pega una imagen con Ctrl+V"
                   rows={3}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -335,9 +391,19 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                       addComment();
                     }
                   }}
+                  onPaste={handleImagePaste}
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Enter para enviar · Shift+Enter para nueva línea</span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    {uploadingImage ? (
+                      <span className="text-indigo-500">Subiendo imagen…</span>
+                    ) : (
+                      <>
+                        <ImagePlus className="h-3 w-3 opacity-60" />
+                        Ctrl+V para pegar imagen · Enter para enviar
+                      </>
+                    )}
+                  </span>
                   <Button onClick={addComment} disabled={isPending || !comment.trim()}>
                     {isPending ? "Enviando..." : "Enviar"}
                   </Button>

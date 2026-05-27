@@ -38,6 +38,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     let detalle: Record<string, unknown> = { de: ticket.estado };
 
     if (action === "take") {
+      if (!isAdmin) {
+        return NextResponse.json({ error: "Solo un administrador puede marcar un ticket en curso." }, { status: 403 });
+      }
       data = { asignadoId: user.id, estado: "EN_CURSO", resueltoAt: null };
       accionHistorial = "TICKET_COGIDO";
       detalle = { de: ticket.estado, a: "EN_CURSO", asignadoId: user.id };
@@ -68,6 +71,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
 
       if (estado === "EN_CURSO") {
+        if (!isAdmin) {
+          return NextResponse.json({ error: "Solo un administrador puede marcar un ticket en curso." }, { status: 403 });
+        }
         data = { estado, asignadoId: ticket.asignadoId ?? user.id, resueltoAt: null };
       } else if (estado === "ABIERTO") {
         data = { estado, asignadoId: null, resueltoAt: null };
