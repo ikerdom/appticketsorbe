@@ -47,8 +47,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
 
-    if (!puedeEditarTicket(user, ticket)) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+    if (user.rol !== "ADMIN") {
+      return NextResponse.json({ error: "Solo un administrador puede editar el ticket." }, { status: 403 });
     }
 
     // Edición simultánea permitida — sin hard-lock (solo informativo)

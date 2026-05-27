@@ -250,7 +250,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {ticket.estado !== "RESUELTO" && (isAdmin || ticket.creadorId === currentUserId) && (
+          {isAdmin && ticket.estado !== "RESUELTO" && (
             editingTicket ? (
               <div className="flex gap-1">
                 <Button size="sm" onClick={saveEdicion} disabled={isPending}>
@@ -478,7 +478,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
-              {editingContact ? (
+              {isAdmin && editingContact ? (
                 <div className="space-y-2">
                   <Input placeholder="Nombre / recurso" value={contactForm.contactoNombre} onChange={(e) => setContactForm((prev) => ({ ...prev, contactoNombre: e.target.value }))} />
                   <Input placeholder="Teléfono" value={contactForm.contactoTelefono} onChange={(e) => setContactForm((prev) => ({ ...prev, contactoTelefono: e.target.value }))} />
@@ -514,9 +514,11 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                         Email
                       </a>
                     ) : null}
-                    <Button size="sm" variant="outline" onClick={() => setEditingContact(true)}>
-                      Editar contacto
-                    </Button>
+                    {isAdmin && (
+                      <Button size="sm" variant="outline" onClick={() => setEditingContact(true)}>
+                        Editar contacto
+                      </Button>
+                    )}
                   </div>
                 </>
               )}

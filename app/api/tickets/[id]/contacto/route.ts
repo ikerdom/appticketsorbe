@@ -15,6 +15,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (!ticket || !puedeVerTicket(user, ticket)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
+    if (user.rol !== "ADMIN") {
+      return NextResponse.json({ error: "Solo un administrador puede editar el contacto." }, { status: 403 });
+    }
 
     const body = (await request.json()) as {
       contactoNombre?: string;
