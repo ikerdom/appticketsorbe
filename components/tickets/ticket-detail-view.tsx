@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImagePlus, Mail, Pencil, Phone, Save, UserRound, X } from "lucide-react";
+import { ArrowLeft, ImagePlus, Mail, Paperclip, Pencil, Phone, Save, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
   const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -114,43 +116,67 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
+  async function uploadImageFile(file: File) {
+    return new Promise<void>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const base64 = dataUrl.split(",")[1];
+        const filename = file.name || `imagen-${Date.now()}.png`;
+        try {
+          const res = await fetch(`/api/tickets/${ticket.id}/adjuntos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename, tipo: file.type || "image/png", base64 })
+          });
+          if (res.ok) {
+            const { adjuntos: [adj] } = await res.json();
+            setAdjuntos((prev) => [...prev, adj]);
+          } else {
+            const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
+            toast.error(body.error ?? "Error al subir imagen");
+          }
+        } catch {
+          toast.error("Error al subir imagen");
+        }
+        resolve();
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function handleImagePaste(e: React.ClipboardEvent) {
-    const imageItems = Array.from(e.clipboardData.items).filter((i) => i.type.startsWith("image/"));
-    if (!imageItems.length) return;
+    const imageFiles = Array.from(e.clipboardData.items)
+      .filter((i) => i.type.startsWith("image/"))
+      .map((i) => i.getAsFile())
+      .filter(Boolean) as File[];
+    if (!imageFiles.length) return;
     e.preventDefault();
     setUploadingImage(true);
-    for (const item of imageItems) {
-      const file = item.getAsFile();
-      if (!file) continue;
-      const reader = new FileReader();
-      await new Promise<void>((resolve) => {
-        reader.onload = async (ev) => {
-          const dataUrl = ev.target?.result as string;
-          const base64 = dataUrl.split(",")[1];
-          const filename = `screenshot-${Date.now()}.png`;
-          try {
-            const res = await fetch(`/api/tickets/${ticket.id}/adjuntos`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ filename, tipo: file.type || "image/png", base64 })
-            });
-            if (res.ok) {
-              const { adjuntos: [adj] } = await res.json();
-              setAdjuntos((prev) => [...prev, adj]);
-              toast.success("Imagen adjuntada");
-            } else {
-              const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
-              toast.error(body.error ?? "Error al subir imagen");
-            }
-          } catch {
-            toast.error("Error al subir imagen");
-          }
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+    for (const file of imageFiles) await uploadImageFile(file);
     setUploadingImage(false);
+    toast.success(imageFiles.length === 1 ? "Imagen adjuntada" : `${imageFiles.length} imágenes adjuntadas`);
+  }
+
+  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    setUploadingImage(true);
+    for (const file of files) await uploadImageFile(file);
+    setUploadingImage(false);
+    toast.success(files.length === 1 ? "Imagen adjuntada" : `${files.length} imágenes adjuntadas`);
+    e.target.value = "";
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    setUploadingImage(true);
+    for (const file of files) await uploadImageFile(file);
+    setUploadingImage(false);
+    toast.success(files.length === 1 ? "Imagen adjuntada" : `${files.length} imágenes adjuntadas`);
   }
 
   async function deleteTicket() {
@@ -364,26 +390,43 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 })}
               </div>
 
+              {/* Image gallery */}
               {adjuntos.filter((a) => a.tipo.startsWith("image/")).length > 0 && (
-                <div className="flex flex-wrap gap-2 pt-1">
+                <div className="flex flex-wrap gap-2 border-t pt-3">
                   {adjuntos.filter((a) => a.tipo.startsWith("image/")).map((adj) => (
-                    <a key={adj.id} href={adj.url} target="_blank" rel="noopener noreferrer" className="group relative block">
+                    <a
+                      key={adj.id}
+                      href={adj.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative block overflow-hidden rounded-lg border shadow-sm hover:shadow-md transition"
+                      title={adj.nombre}
+                    >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={adj.url}
                         alt={adj.nombre}
-                        className="h-24 w-auto max-w-[200px] rounded-lg border object-cover shadow-sm transition group-hover:opacity-80"
+                        className="h-28 w-auto max-w-[220px] object-cover transition group-hover:opacity-85"
                       />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
+                        <ImagePlus className="h-5 w-5 text-white drop-shadow" />
+                      </div>
                     </a>
                   ))}
                 </div>
               )}
 
-              <div className="space-y-2 border-t pt-3">
+              {/* Composer */}
+              <div
+                className={`space-y-2 border-t pt-3 ${dragOver ? "rounded-xl ring-2 ring-indigo-400 ring-offset-1" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={handleDrop}
+              >
                 <Textarea
                   value={comment}
                   onChange={(event) => setComment(event.target.value)}
-                  placeholder="Escribe un mensaje… o pega una imagen con Ctrl+V"
+                  placeholder={dragOver ? "Suelta la imagen aquí…" : "Escribe un mensaje…"}
                   rows={3}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -392,17 +435,30 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                     }
                   }}
                   onPaste={handleImagePaste}
+                  className={dragOver ? "border-indigo-400" : ""}
                 />
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground flex items-center gap-1">
-                    {uploadingImage ? (
-                      <span className="text-indigo-500">Subiendo imagen…</span>
-                    ) : (
-                      <>
-                        <ImagePlus className="h-3 w-3 opacity-60" />
-                        Ctrl+V para pegar imagen · Enter para enviar
-                      </>
-                    )}
+                <div className="flex items-center gap-2">
+                  {/* Hidden file input */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition disabled:opacity-50"
+                    title="Adjuntar imagen"
+                  >
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {uploadingImage ? "Subiendo…" : "Imagen"}
+                  </button>
+                  <span className="flex-1 text-[11px] text-muted-foreground">
+                    Ctrl+V · arrastra · o haz clic en Imagen
                   </span>
                   <Button onClick={addComment} disabled={isPending || !comment.trim()}>
                     {isPending ? "Enviando..." : "Enviar"}
