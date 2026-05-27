@@ -4,10 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle, CheckCircle2, ChevronDown, ChevronRight, ChevronUp,
-  Clock, MessageSquare, Plus, StickyNote
+  Clock, MessageSquare, Plus
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
-import { TareasBoard } from "@/components/tareas/tareas-board";
 
 type TicketEstado = "ABIERTO" | "EN_CURSO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
@@ -100,7 +99,6 @@ const PRIORIDAD_LABEL: Record<Prioridad, string> = {
 
 export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPortalProps) {
   const [showResueltos, setShowResueltos] = useState(false);
-  const [showNotas, setShowNotas] = useState(false);
 
   const abiertos  = tickets.filter(t => t.estado === "ABIERTO");
   const enCurso   = tickets.filter(t => t.estado === "EN_CURSO");
@@ -188,31 +186,6 @@ export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPor
         </>
       )}
 
-      {/* Notas internas — discreta al final */}
-      <div className="border-t pt-3">
-        <button
-          type="button"
-          onClick={() => setShowNotas(v => !v)}
-          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
-        >
-          <StickyNote className="h-3.5 w-3.5" />
-          <span>Notas internas</span>
-          {tareasAct > 0 && (
-            <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">{tareasAct}</span>
-          )}
-          <ChevronRight className={`ml-auto h-3.5 w-3.5 transition-transform ${showNotas ? "rotate-90" : ""}`} />
-        </button>
-        {showNotas && (
-          <div className="mt-3">
-            <TareasBoard
-              initialTareas={tareas}
-              isAdmin={false}
-              currentUserId={currentUserId}
-              usuarios={usuarios}
-            />
-          </div>
-        )}
-      </div>
     </div>
   );
 }

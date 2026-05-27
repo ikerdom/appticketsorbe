@@ -12,10 +12,9 @@ export function esAdmin(user: Pick<User, "rol">) {
   return user.rol === Rol.ADMIN;
 }
 
-export function puedeVerTicket(user: Pick<User, "rol" | "empresaId">, ticket: TicketViewShape) {
+export function puedeVerTicket(user: Pick<User, "id" | "rol" | "empresaId">, ticket: TicketViewShape & { creadorId: string }) {
   if (user.rol === Rol.ADMIN) return true;
-  if (ticket.empresaOrigenId === user.empresaId) return true;
-  return ticket.destinos?.some((destino) => destino.empresaId === user.empresaId) ?? false;
+  return ticket.creadorId === user.id;
 }
 
 /**

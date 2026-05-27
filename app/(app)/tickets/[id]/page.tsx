@@ -1,9 +1,15 @@
-﻿import { notFound } from "next/navigation";
+﻿import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentPageUser } from "@/lib/data";
 import { puedeVerTicket } from "@/lib/permisos";
 import { TicketDetailView } from "@/components/tickets/ticket-detail-view";
 import { markTicketRead } from "@/lib/lecturas";
+
+export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
+  const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { titulo: true } });
+  return { title: ticket?.titulo ?? "Ticket" };
+}
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
   const user = await requireCurrentPageUser();

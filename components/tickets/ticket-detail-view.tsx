@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Mail, Pencil, Phone, Save, UserRound, X } from "lucide-react";
@@ -50,6 +50,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
   // Edición de comentarios: { id: string; contenido: string } | null
   const [editingComment, setEditingComment] = useState<{ id: string; contenido: string } | null>(null);
+  const conversacionRef = useRef<HTMLDivElement>(null);
 
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
@@ -70,6 +71,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     document.addEventListener("keydown", onEsc);
     return () => document.removeEventListener("keydown", onEsc);
   }, [router]);
+
+  // Auto-scroll al último mensaje
+  useEffect(() => {
+    if (conversacionRef.current) {
+      conversacionRef.current.scrollTop = conversacionRef.current.scrollHeight;
+    }
+  }, [comentarios]);
 
   async function performAction(action: string, payload?: Record<string, unknown>) {
     const response = await fetch(`/api/tickets/${ticket.id}/estado`, {
@@ -303,7 +311,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               <CardTitle>Conversación</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1">
+              <div ref={conversacionRef} className="flex max-h-[420px] flex-col gap-2 overflow-y-auto pr-1">
                 {comentarios.length === 0 ? (
                   <p className="py-6 text-center text-sm text-muted-foreground">Sin mensajes todavía. Sé el primero en comentar.</p>
                 ) : null}
@@ -376,14 +384,14 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   placeholder="Escribe un mensaje..."
                   rows={3}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+                    if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       addComment();
                     }
                   }}
                 />
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">Ctrl+Enter para enviar</span>
+                  <span className="text-xs text-muted-foreground">Enter para enviar · Shift+Enter para nueva línea</span>
                   <Button onClick={addComment} disabled={isPending || !comment.trim()}>
                     {isPending ? "Enviando..." : "Enviar"}
                   </Button>

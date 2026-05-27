@@ -31,16 +31,9 @@ export async function requireAdmin() {
   return user;
 }
 
-export function visibleTicketWhere(user: { rol: Rol; empresaId: string }): Prisma.TicketWhereInput {
+export function visibleTicketWhere(user: { id: string; rol: Rol; empresaId: string }): Prisma.TicketWhereInput {
   if (user.rol === Rol.ADMIN) return { archivadoAt: null };
-  return {
-    archivadoAt: null,
-    OR: [
-      { empresaOrigenId: user.empresaId },
-      { empresaDestinoId: user.empresaId },
-      { destinos: { some: { empresaId: user.empresaId } } }
-    ]
-  };
+  return { archivadoAt: null, creadorId: user.id };
 }
 
 export async function getEmpresasActivas() {
