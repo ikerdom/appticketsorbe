@@ -4,6 +4,7 @@ import { requireCurrentPageUser, visibleTicketWhere } from "@/lib/data";
 import { AdminEmpresasPanel } from "@/components/layout/admin-empresas-panel";
 import { UserPortal } from "@/components/portal/user-portal";
 import { ticketUnreadMap } from "@/lib/lecturas";
+import { autoCloseStaleTickets, autoArchiveResolvedTickets } from "@/lib/auto-close";
 
 export const metadata: Metadata = {
   title: "Tickets"
@@ -12,6 +13,13 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const user = await requireCurrentPageUser();
   const isAdmin = user.rol === "ADMIN";
+
+  // Auto-maintenance: close stale tickets (48h inactivity) + archive old resolved (7d)
+  try {
+    await Promise.all([autoCloseStaleTickets(), autoArchiveResolvedTickets()]);
+  } catch (e) {
+    console.error("[auto-maintenance]", e);
+  }
 
   const [tickets, empresas, usuarios, tareas, totalTicketsAdmin] = await Promise.all([
     prisma.ticket.findMany({

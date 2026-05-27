@@ -28,6 +28,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const action = body.action ?? "set_estado";
     const isAdmin = user.rol === "ADMIN";
 
+    // Resolved tickets are permanent — no state changes except archiving
+    if (ticket.estado === "RESUELTO" && action !== "archive") {
+      return NextResponse.json({ error: "Un ticket resuelto no puede cambiar de estado." }, { status: 403 });
+    }
+
     let data: Record<string, unknown> = {};
     let accionHistorial = "ESTADO_CAMBIADO";
     let detalle: Record<string, unknown> = { de: ticket.estado };

@@ -112,23 +112,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
-  function saveComment(comentarioId: string, contenido: string) {
-    startTransition(async () => {
-      const response = await fetch(`/api/tickets/${ticket.id}/comentarios/${comentarioId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contenido })
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "No se pudo editar" }));
-        toast.error(body.error ?? "No se pudo editar");
-        return;
-      }
-      const { comentario: updated } = await response.json();
-      setComentarios((prev) => prev.map((c) => c.id === comentarioId ? { ...c, contenido: updated.contenido } : c));
-      setEditingComment(null);
-      toast.success("Comentario editado");
-    });
+  async function deleteTicket() {
+    if (!confirm("¿Eliminar este ticket permanentemente? Esta acción no se puede deshacer.")) return;
+    const res = await fetch(`/api/tickets/${ticket.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast.success("Ticket eliminado");
+      router.push("/");
+    } else {
+      toast.error("No se pudo eliminar el ticket");
+    }
   }
 
   function saveEdicion() {
@@ -191,7 +183,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {(isAdmin || ticket.creadorId === currentUserId) && (
+          {ticket.estado !== "RESUELTO" && (isAdmin || ticket.creadorId === currentUserId) && (
             editingTicket ? (
               <div className="flex gap-1">
                 <Button size="sm" onClick={saveEdicion} disabled={isPending}>
@@ -436,13 +428,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 </div>
               ) : null}
 
-              {isAdmin && ticket.estado !== "EN_CURSO" ? (
+              {isAdmin && ticket.estado !== "EN_CURSO" && ticket.estado !== "RESUELTO" ? (
                 <Button className="w-full" onClick={() => void performAction("take")}>
                   Marcar en curso
                 </Button>
               ) : null}
 
-              {isAdmin && canResolve ? (
+              {canResolve ? (
                 <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3">
                   <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Marcar como resuelto</p>
                   <div className="space-y-1">
@@ -458,39 +450,51 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                       className="bg-white text-sm"
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-medium text-emerald-800">⏱ Horas dedicadas <span className="font-normal text-emerald-600">(opcional)</span></label>
-                    <Input
-                      type="number"
-                      min="0"
-                      step="0.5"
-                      placeholder="ej: 2.5"
-                      value={horasDedicadas}
-                      onChange={(e) => setHorasDedicadas(e.target.value)}
-                      className="bg-white"
-                    />
-                  </div>
+                  {isAdmin && (
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium text-emerald-800">⏱ Horas dedicadas <span className="font-normal text-emerald-600">(opcional)</span></label>
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.5"
+                        placeholder="ej: 2.5"
+                        value={horasDedicadas}
+                        onChange={(e) => setHorasDedicadas(e.target.value)}
+                        className="bg-white"
+                      />
+                    </div>
+                  )}
                   <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion || undefined })}>
                     ✓ Marcar resuelto
                   </Button>
                 </div>
-              ) : isAdmin && !canResolve ? (
-                <Button variant="outline" className="w-full" onClick={() => void performAction("set_estado", { estado: "EN_CURSO" })}>
-                  Volver a en curso
-                </Button>
-              ) : null}
+              ) : (
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
+                  <p className="text-sm font-semibold text-emerald-700">✓ Ticket resuelto</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Este ticket está cerrado y no se puede editar</p>
+                </div>
+              )}
 
               {isAdmin ? (
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    if (!confirm("¿Seguro que quieres archivar este ticket?")) return;
-                    void performAction("archive");
-                  }}
-                >
-                  Archivar / Cerrar definitivamente
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      if (!confirm("¿Seguro que quieres archivar este ticket?")) return;
+                      void performAction("archive");
+                    }}
+                  >
+                    Archivar / Cerrar definitivamente
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => void deleteTicket()}
+                  >
+                    🗑 Eliminar ticket
+                  </Button>
+                </>
               ) : null}
 
               <Link href="/" className="inline-flex w-full items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-slate-100">
