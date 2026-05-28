@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { Lock, UserRound, X } from "lucide-react";
+import { ImagePlus, Lock, Paperclip, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,65 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [categoriaInput, setCategoriaInput] = useState("");
+
+  // Image attachments — held in memory until ticket is created
+  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function addImageFiles(files: File[]) {
+    const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
+    if (!imgs.length) return;
+    const tooLarge = imgs.filter((f) => f.size > 4 * 1024 * 1024);
+    if (tooLarge.length) { toast.error("Alguna imagen supera 4 MB y no se añadirá"); }
+    const valid = imgs.filter((f) => f.size <= 4 * 1024 * 1024);
+    setPendingImages((prev) => [
+      ...prev,
+      ...valid.map((file) => ({ file, preview: URL.createObjectURL(file) }))
+    ]);
+  }
+
+  function handlePaste(e: React.ClipboardEvent) {
+    const imgs = Array.from(e.clipboardData.items)
+      .filter((i) => i.type.startsWith("image/"))
+      .map((i) => i.getAsFile())
+      .filter(Boolean) as File[];
+    if (!imgs.length) return;
+    e.preventDefault();
+    addImageFiles(imgs);
+    toast.success(imgs.length === 1 ? "Imagen añadida" : `${imgs.length} imágenes añadidas`);
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    addImageFiles(Array.from(e.target.files ?? []));
+    e.target.value = "";
+  }
+
+  function removeImage(idx: number) {
+    setPendingImages((prev) => {
+      URL.revokeObjectURL(prev[idx].preview);
+      return prev.filter((_, i) => i !== idx);
+    });
+  }
+
+  async function uploadPendingImages(ticketId: string) {
+    for (const { file } of pendingImages) {
+      await new Promise<void>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = async (ev) => {
+          const dataUrl = ev.target?.result as string;
+          const base64 = dataUrl.split(",")[1];
+          await fetch(`/api/tickets/${ticketId}/adjuntos`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: file.name || `imagen-${Date.now()}.png`, tipo: file.type || "image/png", base64 })
+          }).catch(() => null);
+          resolve();
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  }
 
   const form = useForm<FormData>({
     resolver: zodResolver(nuevoTicketSchema),
@@ -123,6 +182,12 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
       }
 
       const { ticket } = await response.json();
+
+      // Upload pending images (non-blocking — ticket already created)
+      if (pendingImages.length > 0) {
+        await uploadPendingImages(ticket.id);
+      }
+
       toast.success("Ticket creado correctamente");
       router.push(`/tickets/${ticket.id}`);
       router.refresh();
@@ -183,11 +248,61 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
 
           <div className="space-y-2">
             <Label htmlFor="descripcion">Descripción</Label>
-            <Textarea id="descripcion" rows={8} {...form.register("descripcion")} className="min-h-[160px]" />
+            <div
+              className={`relative rounded-xl transition ${dragOver ? "ring-2 ring-indigo-400 ring-offset-1" : ""}`}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => { e.preventDefault(); setDragOver(false); addImageFiles(Array.from(e.dataTransfer.files)); }}
+            >
+              <Textarea
+                id="descripcion"
+                rows={8}
+                {...form.register("descripcion")}
+                className={`min-h-[160px] ${dragOver ? "border-indigo-400" : ""}`}
+                placeholder={dragOver ? "Suelta las imágenes aquí…" : undefined}
+                onPaste={handlePaste}
+              />
+            </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>{form.formState.errors.descripcion?.message}</span>
               <span>{descripcion.length} caracteres</span>
             </div>
+
+            {/* Image picker */}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                Adjuntar imagen
+              </button>
+              <span className="text-[11px] text-muted-foreground">o Ctrl+V · arrastra sobre la descripción</span>
+            </div>
+
+            {/* Pending image thumbnails */}
+            {pendingImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {pendingImages.map(({ preview }, idx) => (
+                  <div key={idx} className="group relative overflow-hidden rounded-lg border shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview} alt={`imagen ${idx + 1}`} className="h-24 w-auto max-w-[180px] object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(idx)}
+                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex items-center">
+                  <span className="text-xs text-slate-400">{pendingImages.length} imagen{pendingImages.length !== 1 ? "es" : ""}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <Card className="rounded-2xl border-dashed">

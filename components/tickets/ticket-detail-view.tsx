@@ -531,6 +531,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
             </CardContent>
           </Card>
 
+          {!isAdmin && currentEstado !== "RESUELTO" && ticket.creadorId === currentUserId && (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <p className="text-sm font-semibold text-emerald-800">💡 ¿Ya está resuelta tu incidencia?</p>
+              <p className="mt-1 text-xs text-emerald-700 leading-relaxed">
+                Si el problema ya se solucionó, puedes marcarlo tú mismo como resuelto — no hace falta pedírselo a nadie. Usa el botón <strong>Marcar resuelto</strong> más abajo.
+              </p>
+            </div>
+          )}
+
           <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle>Acciones</CardTitle>
