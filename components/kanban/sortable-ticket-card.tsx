@@ -33,7 +33,15 @@ const PRIORIDAD_TEXT: Record<Prioridad, string> = {
   BAJA: "text-slate-500"
 };
 
-export function SortableTicketCard({ ticket }: { ticket: TicketCardData }) {
+export function SortableTicketCard({
+  ticket,
+  isAdmin,
+  onTake
+}: {
+  ticket: TicketCardData;
+  isAdmin?: boolean;
+  onTake?: (ticketId: string) => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: ticket.id,
     data: { estado: ticket.estado }
@@ -108,6 +116,16 @@ export function SortableTicketCard({ ticket }: { ticket: TicketCardData }) {
 
       {categoria ? (
         <p className="mt-2 text-[11px] text-slate-400">{categoria}</p>
+      ) : null}
+
+      {isAdmin && ticket.estado === "ABIERTO" && onTake ? (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onTake(ticket.id); }}
+          className="mt-2.5 w-full rounded-lg bg-amber-500 px-2 py-1.5 text-[11px] font-bold text-white transition hover:bg-amber-600 active:scale-95"
+        >
+          → En curso
+        </button>
       ) : null}
     </Card>
   );

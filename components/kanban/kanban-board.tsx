@@ -177,6 +177,26 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     setTickets(data.tickets ?? []);
   }
 
+  async function handleTake(ticketId: string) {
+    const previous = tickets;
+    setTickets(tickets.map((t) =>
+      t.id === ticketId ? { ...t, estado: "EN_CURSO" as const, asignadoId: currentUserId } : t
+    ));
+    const response = await fetch(`/api/tickets/${ticketId}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "take" })
+    });
+    if (!response.ok) {
+      setTickets(previous);
+      const body = await response.json().catch(() => ({ error: "No se pudo marcar en curso" }));
+      toast.error(body.error ?? "No se pudo marcar en curso");
+      return;
+    }
+    toast.success("Ticket marcado en curso");
+    startTransition(() => { void refreshAllTickets(); });
+  }
+
   async function onDragEnd(event: any) {
     const { active, over } = event;
     if (!over) return;
@@ -366,7 +386,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
               <Column key={estado} id={estado} title={ESTADO_LABELS[estado]} count={all.length}>
                 <SortableContext items={all.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                   {mine.map((ticket) => (
-                    <SortableTicketCard key={ticket.id} ticket={ticket} />
+                    <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
                   ))}
                   {others.length > 0 && mine.length > 0 ? (
                     <div className="pointer-events-none py-1 text-center text-[11px] text-slate-400">
@@ -374,7 +394,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
                     </div>
                   ) : null}
                   {others.map((ticket) => (
-                    <SortableTicketCard key={ticket.id} ticket={ticket} />
+                    <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
                   ))}
                 </SortableContext>
               </Column>
@@ -399,7 +419,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
                   <Column id={activeTab} title={ESTADO_LABELS[activeTab]} count={all.length}>
                     <SortableContext items={all.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                       {mine.map((ticket) => (
-                        <SortableTicketCard key={ticket.id} ticket={ticket} />
+                        <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
                       ))}
                       {others.length > 0 && mine.length > 0 ? (
                         <div className="pointer-events-none py-1 text-center text-[11px] text-slate-400">
@@ -407,7 +427,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
                         </div>
                       ) : null}
                       {others.map((ticket) => (
-                        <SortableTicketCard key={ticket.id} ticket={ticket} />
+                        <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
                       ))}
                     </SortableContext>
                   </Column>

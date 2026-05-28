@@ -283,7 +283,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="border bg-blue-100 text-blue-700">{ticket.estado.replace("_", " ")}</Badge>
+        <Badge className="border bg-blue-100 text-blue-700">{currentEstado.replace("_", " ")}</Badge>
         <Badge className={PRIORIDAD_COLOR[ticket.prioridad]}>{PRIORIDAD_LABELS[ticket.prioridad]}</Badge>
         {destinos.map((destino) => (
           <Badge key={destino.id} className="border-transparent text-white" style={{ backgroundColor: destino.empresa.color || "#64748b" }}>
