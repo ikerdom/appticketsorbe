@@ -1,4 +1,4 @@
-﻿import { Ticket, Empresa, User, Comentario, Adjunto, TicketEmpresaDestino } from "@prisma/client";
+﻿import { Ticket, Empresa, User, Comentario, Adjunto, TicketEmpresaDestino, NotaTicket } from "@prisma/client";
 
 type DestinoWithEmpresa = TicketEmpresaDestino & { empresa: Empresa };
 
@@ -29,4 +29,7 @@ export type TicketDetailData = Ticket & {
     createdAt: Date;
     autor: Pick<User, "id" | "email" | "nombre" | "name"> | null;
   }[];
+  notas: (NotaTicket & {
+    autor: Pick<User, "id" | "email" | "nombre" | "name">;
+  })[];
 };

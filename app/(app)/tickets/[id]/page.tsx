@@ -27,6 +27,10 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         orderBy: { createdAt: "asc" }
       },
       adjuntos: { orderBy: { createdAt: "desc" } },
+      notas: {
+        include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },
+        orderBy: { createdAt: "asc" }
+      },
       historial: {
         include: {
           autor: { select: { id: true, email: true, nombre: true, name: true } }

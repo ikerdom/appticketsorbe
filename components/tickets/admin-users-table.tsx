@@ -67,6 +67,7 @@ export function AdminUsersTable({ usuarios, empresas }: { usuarios: UsuarioRow[]
   const [editUser, setEditUser] = useState<UsuarioRow | null>(null);
   const [confirmRoleUser, setConfirmRoleUser] = useState<UsuarioRow | null>(null);
   const [changeCompanyUser, setChangeCompanyUser] = useState<UsuarioRow | null>(null);
+  const [confirmResetUser, setConfirmResetUser] = useState<UsuarioRow | null>(null);
   const [newCompanyId, setNewCompanyId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -85,6 +86,7 @@ export function AdminUsersTable({ usuarios, empresas }: { usuarios: UsuarioRow[]
     setEditUser(null);
     setConfirmRoleUser(null);
     setChangeCompanyUser(null);
+    setConfirmResetUser(null);
     setMenuUserId(null);
   }
 
@@ -221,13 +223,7 @@ export function AdminUsersTable({ usuarios, empresas }: { usuarios: UsuarioRow[]
                               {usuario.activo ? "Desactivar" : "Activar"}
                             </button>
                             <button type="button" className="block w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50"
-                              onClick={async () => {
-                                setMenuUserId(null);
-                                const res = await fetch(`/api/admin/usuarios/${usuario.id}/reset-password`, { method: "PATCH" });
-                                if (!res.ok) { toast.error(await readError(res, "No se pudo restablecer")); return; }
-                                toast.success("Contraseña restablecida a 1234");
-                                router.refresh();
-                              }}>
+                              onClick={() => { setConfirmResetUser(usuario); setMenuUserId(null); }}>
                               Restablecer contraseña
                             </button>
                           </div>
@@ -316,6 +312,31 @@ export function AdminUsersTable({ usuarios, empresas }: { usuarios: UsuarioRow[]
               if (ok) { toast.success("Empresa actualizada"); closeAll(); router.refresh(); }
             }}>
               {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: Confirmar reset contraseña */}
+      {confirmResetUser && (
+        <Modal title="Restablecer contraseña" onClose={closeAll}>
+          <p className="text-sm text-muted-foreground">
+            ¿Restablecer la contraseña de <strong>{displayName(confirmResetUser)}</strong> a <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-xs">1234</code>?
+          </p>
+          <p className="mt-1 text-xs text-amber-600">El usuario deberá cambiarla en su próximo inicio de sesión.</p>
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={closeAll}>Cancelar</Button>
+            <Button variant="destructive" disabled={saving} onClick={async () => {
+              setSaving(true);
+              try {
+                const res = await fetch(`/api/admin/usuarios/${confirmResetUser.id}/reset-password`, { method: "PATCH" });
+                if (!res.ok) { toast.error(await readError(res, "No se pudo restablecer")); return; }
+                toast.success("Contraseña restablecida a 1234");
+                closeAll();
+                router.refresh();
+              } finally { setSaving(false); }
+            }}>
+              {saving ? "Restableciendo..." : "Sí, restablecer"}
             </Button>
           </div>
         </Modal>

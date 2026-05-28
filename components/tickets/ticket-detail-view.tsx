@@ -52,6 +52,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const conversacionRef = useRef<HTMLDivElement>(null);
 
   const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
+  const [notas, setNotas] = useState(ticket.notas);
+  const [nuevaNota, setNuevaNota] = useState("");
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -629,6 +631,95 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 <ArrowLeft className="h-4 w-4" />
                 Volver al listado
               </Link>
+            </CardContent>
+          </Card>
+
+          {/* Notas: compartidas entre admins / privadas para usuarios */}
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-sm">
+                📝 Notas
+                {isAdmin && (
+                  <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
+                    Compartidas entre admins
+                  </span>
+                )}
+                {!isAdmin && (
+                  <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                    Solo tú las ves
+                  </span>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {notas.length === 0 ? (
+                <p className="text-center text-xs text-muted-foreground py-2">Sin notas</p>
+              ) : (
+                <div className="space-y-2">
+                  {notas.map((n) => {
+                    const autorName = n.autor.nombre || n.autor.name || n.autor.email;
+                    const esPropia = n.autorId === currentUserId;
+                    return (
+                      <div key={n.id} className="group relative rounded-lg border bg-amber-50 p-2.5 text-sm">
+                        {isAdmin && !esPropia && (
+                          <p className="mb-1 text-[10px] font-semibold text-violet-600">{autorName}</p>
+                        )}
+                        <p className="whitespace-pre-wrap leading-relaxed text-slate-800">{n.contenido}</p>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <span className="text-[10px] text-slate-400">{formatDateTimeEs(n.createdAt)}</span>
+                          {(isAdmin || esPropia) && (
+                            <button
+                              type="button"
+                              className="hidden text-[10px] text-red-400 hover:text-red-600 group-hover:inline"
+                              onClick={async () => {
+                                if (!confirm("¿Eliminar esta nota?")) return;
+                                const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
+                                  method: "DELETE",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ notaId: n.id })
+                                });
+                                if (res.ok) setNotas((prev) => prev.filter((x) => x.id !== n.id));
+                                else toast.error("No se pudo eliminar la nota");
+                              }}
+                            >
+                              Eliminar
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="flex gap-2 pt-1">
+                <Textarea
+                  rows={2}
+                  placeholder={isAdmin ? "Nota interna (visible para todos los admins)…" : "Nota privada (solo tú la ves)…"}
+                  value={nuevaNota}
+                  onChange={(e) => setNuevaNota(e.target.value)}
+                  className="text-sm"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={!nuevaNota.trim()}
+                onClick={async () => {
+                  const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contenido: nuevaNota.trim() })
+                  });
+                  if (!res.ok) { toast.error("No se pudo guardar la nota"); return; }
+                  const { nota } = await res.json();
+                  setNotas((prev) => [...prev, nota]);
+                  setNuevaNota("");
+                  toast.success("Nota guardada");
+                }}
+              >
+                Guardar nota
+              </Button>
             </CardContent>
           </Card>
         </div>
