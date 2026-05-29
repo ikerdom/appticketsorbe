@@ -114,9 +114,10 @@ export function SortableTicketCard({
         <span className="text-[11px] text-slate-400">{formatRelativeEs(ticket.createdAt)}</span>
       </div>
 
-      {categoria ? (
-        <p className="mt-2 text-[11px] text-slate-400">{categoria}</p>
-      ) : null}
+      <p className="mt-2 text-[11px] text-slate-400 truncate">
+        {categoria ? <>{categoria} · </> : null}
+        <span className="text-indigo-400">{ticket.creador.email}</span>
+      </p>
 
       {isAdmin && ticket.estado === "ABIERTO" && onTake ? (
         <button
