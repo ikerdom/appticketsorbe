@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { DndContext, PointerSensor, closestCorners, useDroppable, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, PointerSensor, closestCenter, pointerWithin, useDroppable, useSensor, useSensors, type CollisionDetection } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Estado, Prioridad } from "@prisma/client";
 import { ChevronDown, ChevronUp, Plus, SlidersHorizontal } from "lucide-react";
@@ -48,12 +48,17 @@ const COLUMN_STYLES: Record<Estado, { header: string; dot: string; badge: string
 };
 const HISTORICO_DIAS = 3;
 
-function Column({ id, title, children, count }: { id: Estado; title: string; children: React.ReactNode; count: number }) {
+function Column({ id, title, children, count, isDragOver }: { id: Estado; title: string; children: React.ReactNode; count: number; isDragOver?: boolean }) {
   const { setNodeRef } = useDroppable({ id });
   const s = COLUMN_STYLES[id];
 
   return (
-    <div className="space-y-2.5" role="region" aria-label={title}>
+    <div
+      ref={setNodeRef}
+      className={`space-y-2.5 rounded-2xl p-2 transition-colors ${isDragOver ? "bg-slate-100 ring-2 ring-indigo-300 ring-offset-1" : ""}`}
+      role="region"
+      aria-label={title}
+    >
       <div className={`rounded-xl border px-4 py-2.5 ${s.header}`}>
         <div className="flex items-center gap-2.5">
           <div className={`h-2.5 w-2.5 rounded-full shadow-sm ${s.dot}`} />
@@ -62,10 +67,10 @@ function Column({ id, title, children, count }: { id: Estado; title: string; chi
         </div>
       </div>
 
-      <div ref={setNodeRef} className={`min-h-[240px] space-y-2 rounded-xl p-2 ${s.dropzone}`}>
+      <div className={`min-h-[240px] space-y-2 rounded-xl p-2 ${s.dropzone}`}>
         {count === 0 ? (
           <div className="rounded-lg border border-dashed border-current/20 p-6 text-center text-xs text-muted-foreground opacity-60">
-            Sin tickets
+            Suelta aquí
           </div>
         ) : null}
         {children}
@@ -82,6 +87,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [draggingOver, setDraggingOver] = useState<Estado | null>(null);
 
   // Client-side filters — no API call on change
   const [filters, setFilters] = useState({
@@ -99,7 +105,23 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     }
   }, [initialEmpresaFilter]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  // Custom collision: prefer column droppables (pointer-within), fall back to closestCenter
+  const collisionDetection: CollisionDetection = (args) => {
+    const pointerHits = pointerWithin(args);
+    // If pointer is within a column droppable, use that
+    const columnHit = pointerHits.find((c) => c.id === "ABIERTO" || c.id === "EN_CURSO" || c.id === "RESUELTO");
+    if (columnHit) return [columnHit];
+    // Otherwise fall back to closestCenter (works for ticket-over-ticket reorder)
+    return closestCenter(args);
+  };
+
+  function getTargetEstado(overId: string): Estado | null {
+    if (overId === "ABIERTO" || overId === "EN_CURSO" || overId === "RESUELTO") return overId as Estado;
+    const overTicket = tickets.find((t) => t.id === overId);
+    return overTicket?.estado ?? null;
+  }
 
   const hasActiveFilters = useMemo(
     () => Boolean(filters.empresaId || filters.prioridad || filters.categoria),
@@ -197,7 +219,14 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     startTransition(() => { void refreshAllTickets(); });
   }
 
+  function onDragMove(event: any) {
+    const { over } = event;
+    if (!over) { setDraggingOver(null); return; }
+    setDraggingOver(getTargetEstado(String(over.id)));
+  }
+
   async function onDragEnd(event: any) {
+    setDraggingOver(null);
     const { active, over } = event;
     if (!over) return;
 
@@ -205,14 +234,8 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     const fromTicket = tickets.find((t) => t.id === ticketId);
     if (!fromTicket) return;
 
-    let targetEstado: Estado;
-    if (over.id === "ABIERTO" || over.id === "EN_CURSO" || over.id === "RESUELTO") {
-      targetEstado = over.id as Estado;
-    } else {
-      const overTicket = tickets.find((t) => t.id === String(over.id));
-      if (!overTicket) return;
-      targetEstado = overTicket.estado;
-    }
+    const targetEstado = getTargetEstado(String(over.id));
+    if (!targetEstado) return;
 
     const canTakeByDrag = fromTicket.estado === "ABIERTO" && !fromTicket.asignadoId && targetEstado === "EN_CURSO";
     const isCreator = fromTicket.creadorId === currentUserId;
@@ -377,13 +400,13 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
         </Card>
       ) : null}
 
-      <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={onDragEnd}>
+      <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => setDraggingOver(null)}>
         <div className="hidden gap-4 md:grid md:grid-cols-3" role="list" aria-label="Kanban de tickets">
           {(Object.keys(grouped) as Estado[]).map((estado) => {
             const { mine, others } = groupedSplit[estado];
             const all = grouped[estado];
             return (
-              <Column key={estado} id={estado} title={ESTADO_LABELS[estado]} count={all.length}>
+              <Column key={estado} id={estado} title={ESTADO_LABELS[estado]} count={all.length} isDragOver={draggingOver === estado}>
                 <SortableContext items={all.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                   {mine.map((ticket) => (
                     <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
@@ -416,7 +439,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
                 const { mine, others } = groupedSplit[activeTab];
                 const all = grouped[activeTab];
                 return (
-                  <Column id={activeTab} title={ESTADO_LABELS[activeTab]} count={all.length}>
+                  <Column id={activeTab} title={ESTADO_LABELS[activeTab]} count={all.length} isDragOver={draggingOver === activeTab}>
                     <SortableContext items={all.map((t) => t.id)} strategy={verticalListSortingStrategy}>
                       {mine.map((ticket) => (
                         <SortableTicketCard key={ticket.id} ticket={ticket} isAdmin={isAdmin} onTake={handleTake} />
