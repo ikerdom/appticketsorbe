@@ -93,11 +93,20 @@ export function SortableTicketCard({
         </div>
       </div>
 
-      <Link href={`/tickets/${ticket.id}`} className="block mb-3">
+      <Link href={`/tickets/${ticket.id}`} className="block mb-2">
         <p className={`line-clamp-2 text-sm font-semibold leading-snug hover:text-indigo-600 ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
           {ticket.titulo}
         </p>
       </Link>
+
+      {ticket.descripcion ? (
+        <p
+          className="mb-2 line-clamp-3 text-[11px] leading-relaxed text-slate-500"
+          title={ticket.descripcion.length > 500 ? ticket.descripcion.slice(0, 500) + "…" : ticket.descripcion}
+        >
+          {ticket.descripcion}
+        </p>
+      ) : null}
 
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">

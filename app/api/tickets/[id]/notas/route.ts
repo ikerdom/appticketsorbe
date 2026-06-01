@@ -3,13 +3,14 @@ import { prisma } from "@/lib/prisma";
 import { requireCurrentUser } from "@/lib/data";
 import { puedeVerTicket } from "@/lib/permisos";
 
-/** GET — returns notes visible to the current user:
- *  - ADMIN: all notes where esAdmin=true, plus their own private notes
- *  - USER:  only their own notes (esAdmin=false, autorId=me)
- */
+/** GET — admin: all notes for this ticket. user: empty array (notes are admin-only). */
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireCurrentUser();
+
+    // Non-admins get empty array — notes are internal admin only
+    if (user.rol !== "ADMIN") return NextResponse.json({ notas: [] });
+
     const ticket = await prisma.ticket.findUnique({
       where: { id: params.id },
       include: { destinos: { include: { empresa: { select: { isGlobalTarget: true } } } } }
@@ -18,15 +19,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    const isAdmin = user.rol === "ADMIN";
-
     const notas = await prisma.notaTicket.findMany({
-      where: {
-        ticketId: params.id,
-        ...(isAdmin
-          ? { OR: [{ esAdmin: true }, { autorId: user.id }] }
-          : { autorId: user.id })
-      },
+      where: { ticketId: params.id },
       include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },
       orderBy: { createdAt: "asc" }
     });
@@ -37,13 +31,14 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   }
 }
 
-/** POST — create a note.
- *  - ADMIN: esAdmin=true (shared with other admins)
- *  - USER:  esAdmin=false (private)
- */
+/** POST — admin only. */
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireCurrentUser();
+    if (user.rol !== "ADMIN") {
+      return NextResponse.json({ error: "Solo los administradores pueden añadir notas internas." }, { status: 403 });
+    }
+
     const ticket = await prisma.ticket.findUnique({
       where: { id: params.id },
       include: { destinos: { include: { empresa: { select: { isGlobalTarget: true } } } } }
@@ -57,14 +52,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "La nota no puede estar vacía" }, { status: 400 });
     }
 
-    const isAdmin = user.rol === "ADMIN";
-
     const nota = await prisma.notaTicket.create({
       data: {
         contenido: body.contenido.trim(),
         ticketId: params.id,
         autorId: user.id,
-        esAdmin: isAdmin
+        esAdmin: true
       },
       include: { autor: { select: { id: true, email: true, nombre: true, name: true } } }
     });
@@ -75,23 +68,20 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
   }
 }
 
-/** DELETE — only the author (or any admin) can delete a note */
+/** DELETE — admin only. */
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireCurrentUser();
-    const body = (await request.json()) as { notaId?: string };
-    if (!body.notaId) {
-      return NextResponse.json({ error: "notaId requerido" }, { status: 400 });
+    if (user.rol !== "ADMIN") {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
+
+    const body = (await request.json()) as { notaId?: string };
+    if (!body.notaId) return NextResponse.json({ error: "notaId requerido" }, { status: 400 });
 
     const nota = await prisma.notaTicket.findUnique({ where: { id: body.notaId } });
     if (!nota || nota.ticketId !== params.id) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
-    }
-
-    const isAdmin = user.rol === "ADMIN";
-    if (!isAdmin && nota.autorId !== user.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     await prisma.notaTicket.delete({ where: { id: body.notaId } });

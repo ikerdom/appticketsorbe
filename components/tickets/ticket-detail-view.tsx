@@ -54,6 +54,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
   const [notas, setNotas] = useState(ticket.notas);
   const [nuevaNota, setNuevaNota] = useState("");
+  const [descExpanded, setDescExpanded] = useState(true);
+  const LONG_DESC = 500;
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -365,7 +367,20 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   </div>
                 </div>
               ) : (
-                <p className="whitespace-pre-wrap text-sm">{ticket.descripcion}</p>
+                <div>
+                  <p className={`whitespace-pre-wrap text-sm leading-relaxed ${!descExpanded ? "line-clamp-6" : ""}`}>
+                    {ticket.descripcion}
+                  </p>
+                  {ticket.descripcion.length > LONG_DESC && (
+                    <button
+                      type="button"
+                      onClick={() => setDescExpanded((v) => !v)}
+                      className="mt-2 text-xs font-medium text-indigo-600 hover:underline"
+                    >
+                      {descExpanded ? "Mostrar menos ▲" : "Mostrar más ▼"}
+                    </button>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
@@ -643,40 +658,33 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
             </CardContent>
           </Card>
 
-          {/* Notas: compartidas entre admins / privadas para usuarios */}
-          <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-sm">
-                📝 Notas
-                {isAdmin && (
-                  <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-700">
-                    Compartidas entre admins
+          {/* Notas internas — solo admins */}
+          {isAdmin && (
+            <Card className="rounded-2xl border-violet-200 bg-violet-50/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold text-violet-800">
+                  🔒 Notas internas — solo admins
+                  <span className="ml-auto rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-semibold text-violet-600">
+                    {notas.length} nota{notas.length !== 1 ? "s" : ""}
                   </span>
-                )}
-                {!isAdmin && (
-                  <span className="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                    Solo tú las ves
-                  </span>
-                )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {notas.length === 0 ? (
-                <p className="text-center text-xs text-muted-foreground py-2">Sin notas</p>
-              ) : (
-                <div className="space-y-2">
-                  {notas.map((n) => {
-                    const autorName = n.autor.nombre || n.autor.name || n.autor.email;
-                    const esPropia = n.autorId === currentUserId;
-                    return (
-                      <div key={n.id} className="group relative rounded-lg border bg-amber-50 p-2.5 text-sm">
-                        {isAdmin && !esPropia && (
-                          <p className="mb-1 text-[10px] font-semibold text-violet-600">{autorName}</p>
-                        )}
-                        <p className="whitespace-pre-wrap leading-relaxed text-slate-800">{n.contenido}</p>
-                        <div className="mt-1 flex items-center justify-between gap-2">
-                          <span className="text-[10px] text-slate-400">{formatDateTimeEs(n.createdAt)}</span>
-                          {(isAdmin || esPropia) && (
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {notas.length === 0 ? (
+                  <p className="text-center text-xs text-muted-foreground py-2">Sin notas internas</p>
+                ) : (
+                  <div className="space-y-2">
+                    {notas.map((n) => {
+                      const autorName = n.autor.nombre || n.autor.name || n.autor.email;
+                      const esPropia = n.autorId === currentUserId;
+                      return (
+                        <div key={n.id} className="group relative rounded-lg border border-violet-200 bg-white p-3 text-sm shadow-sm">
+                          <p className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-violet-500">
+                            🔒 {esPropia ? "Tú" : autorName}
+                          </p>
+                          <p className="whitespace-pre-wrap leading-relaxed text-slate-800">{n.contenido}</p>
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <span className="text-[10px] text-slate-400">{formatDateTimeEs(n.createdAt)}</span>
                             <button
                               type="button"
                               className="hidden text-[10px] text-red-400 hover:text-red-600 group-hover:inline"
@@ -693,44 +701,44 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                             >
                               Eliminar
                             </button>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
+                )}
+                <div className="pt-1">
+                  <Textarea
+                    rows={2}
+                    placeholder="Nota interna — visible para todos los admins…"
+                    value={nuevaNota}
+                    onChange={(e) => setNuevaNota(e.target.value)}
+                    className="text-sm border-violet-200 focus:ring-violet-400"
+                  />
                 </div>
-              )}
-              <div className="flex gap-2 pt-1">
-                <Textarea
-                  rows={2}
-                  placeholder={isAdmin ? "Nota interna (visible para todos los admins)…" : "Nota privada (solo tú la ves)…"}
-                  value={nuevaNota}
-                  onChange={(e) => setNuevaNota(e.target.value)}
-                  className="text-sm"
-                />
-              </div>
-              <Button
-                size="sm"
-                variant="outline"
-                className="w-full"
-                disabled={!nuevaNota.trim()}
-                onClick={async () => {
-                  const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contenido: nuevaNota.trim() })
-                  });
-                  if (!res.ok) { toast.error("No se pudo guardar la nota"); return; }
-                  const { nota } = await res.json();
-                  setNotas((prev) => [...prev, nota]);
-                  setNuevaNota("");
-                  toast.success("Nota guardada");
-                }}
-              >
-                Guardar nota
-              </Button>
-            </CardContent>
-          </Card>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full border-violet-200 text-violet-700 hover:bg-violet-50"
+                  disabled={!nuevaNota.trim()}
+                  onClick={async () => {
+                    const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ contenido: nuevaNota.trim() })
+                    });
+                    if (!res.ok) { toast.error("No se pudo guardar la nota"); return; }
+                    const { nota } = await res.json();
+                    setNotas((prev) => [...prev, nota]);
+                    setNuevaNota("");
+                    toast.success("Nota guardada");
+                  }}
+                >
+                  🔒 Guardar nota interna
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
