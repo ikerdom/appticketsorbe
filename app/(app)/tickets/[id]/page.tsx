@@ -28,6 +28,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       },
       adjuntos: { orderBy: { createdAt: "desc" } },
       notas: {
+        where: { esAdmin: true },
         include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },
         orderBy: { createdAt: "asc" }
       },

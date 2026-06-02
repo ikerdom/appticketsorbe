@@ -256,11 +256,18 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       if (!ok) return;
     }
 
-    // Optimistic update
+    // Optimistic update — set resueltoAt so ticket doesn't fall into historico (>3d cutoff)
     const previous = tickets;
+    const now = new Date();
     setTickets(tickets.map((t) =>
       t.id === ticketId
-        ? { ...t, estado: targetEstado, asignadoId: canTakeByDrag ? currentUserId : t.asignadoId }
+        ? {
+            ...t,
+            estado: targetEstado,
+            asignadoId: canTakeByDrag ? currentUserId : t.asignadoId,
+            resueltoAt: targetEstado === "RESUELTO" ? now : (targetEstado === "ABIERTO" ? null : t.resueltoAt),
+            updatedAt: now
+          }
         : t
     ));
 
