@@ -46,7 +46,7 @@ const COLUMN_STYLES: Record<Estado, { header: string; dot: string; badge: string
     dropzone: "bg-emerald-50/40"
   }
 };
-const HISTORICO_DIAS = 3;
+const HISTORICO_DIAS = 1;
 
 function Column({ id, title, children, count, isDragOver }: { id: Estado; title: string; children: React.ReactNode; count: number; isDragOver?: boolean }) {
   const { setNodeRef } = useDroppable({ id });
@@ -191,18 +191,29 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     [grouped, currentUserEmpresaId, isAdmin]
   );
 
-  // Refresh full ticket list from API (called after DnD state changes)
-  async function refreshAllTickets() {
+  // Merge a single updated ticket into state (no full replace → no flash)
+  function mergeTicket(updated: TicketCardData) {
+    setTickets((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
+  }
+
+  // Full refresh — only used as a delayed background sync (multi-user)
+  async function backgroundSync() {
     const response = await fetch(`/api/tickets`, { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json();
-    setTickets(data.tickets ?? []);
+    startTransition(() => setTickets(data.tickets ?? []));
+  }
+
+  // Schedule a background sync after a short delay (avoids read-after-write race on Neon)
+  function scheduleSync() {
+    setTimeout(() => { void backgroundSync(); }, 1500);
   }
 
   async function handleTake(ticketId: string) {
     const previous = tickets;
+    const now = new Date();
     setTickets(tickets.map((t) =>
-      t.id === ticketId ? { ...t, estado: "EN_CURSO" as const, asignadoId: currentUserId } : t
+      t.id === ticketId ? { ...t, estado: "EN_CURSO" as const, asignadoId: currentUserId, updatedAt: now } : t
     ));
     const response = await fetch(`/api/tickets/${ticketId}/estado`, {
       method: "PATCH",
@@ -216,7 +227,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       return;
     }
     toast.success("Ticket marcado en curso");
-    startTransition(() => { void refreshAllTickets(); });
+    scheduleSync();
   }
 
   function onDragMove(event: any) {
@@ -285,7 +296,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     }
 
     toast.success("Ticket actualizado");
-    startTransition(() => { void refreshAllTickets(); });
+    scheduleSync();
   }
 
   return (
