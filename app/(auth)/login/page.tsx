@@ -99,7 +99,10 @@ export default function LoginPage() {
         setError(data.message || (step === "existing_password" ? "Contraseña incorrecta." : "No se pudo crear la cuenta."));
         return;
       }
-      router.push(data.redirect || "/");
+      const params = new URLSearchParams(window.location.search);
+      const next = params.get("next") ?? "";
+      const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : null;
+      router.push(safeNext || data.redirect || "/");
       router.refresh();
     } catch {
       setError("No se pudo conectar con el servidor.");

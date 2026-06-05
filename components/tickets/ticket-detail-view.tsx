@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ImagePlus, Mail, Paperclip, Pencil, Phone, Save, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, ImagePlus, Link2, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -56,6 +56,17 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const [nuevaNota, setNuevaNota] = useState("");
   const [descExpanded, setDescExpanded] = useState(true);
   const LONG_DESC = 500;
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShareOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -242,6 +253,44 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
+  function getTicketUrl() {
+    return `${window.location.origin}/tickets/${ticket.id}`;
+  }
+
+  async function copyLink() {
+    const url = getTicketUrl();
+    try {
+      await navigator.clipboard.writeText(url);
+    } catch {
+      // Fallback for older browsers
+      const input = document.createElement("input");
+      input.value = url;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand("copy");
+      document.body.removeChild(input);
+    }
+    setCopied(true);
+    toast.success("Enlace copiado. Pégalo donde quieras.");
+    setTimeout(() => setCopied(false), 2000);
+    setShareOpen(false);
+  }
+
+  function shareWhatsApp() {
+    const num = `#${String(ticket.numero).padStart(4, "0")}`;
+    const text = encodeURIComponent(`Incidencia ${num} — ${ticket.titulo}\n${getTicketUrl()}`);
+    window.open(`https://wa.me/?text=${text}`, "_blank");
+    setShareOpen(false);
+  }
+
+  function shareEmail() {
+    const num = `#${String(ticket.numero).padStart(4, "0")}`;
+    const subject = encodeURIComponent(`[Incidencia ${num}] ${ticket.titulo}`);
+    const body = encodeURIComponent(`Te paso esta incidencia:\n\n${getTicketUrl()}`);
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    setShareOpen(false);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
@@ -258,6 +307,35 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {/* Share dropdown */}
+          <div className="relative" ref={shareRef}>
+            <button
+              type="button"
+              onClick={() => setShareOpen((v) => !v)}
+              className="inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm hover:bg-slate-100 transition"
+              title="Compartir enlace"
+            >
+              {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Share2 className="h-4 w-4" />}
+              <span className="hidden sm:inline">{copied ? "Copiado" : "Compartir"}</span>
+            </button>
+            {shareOpen && (
+              <div className="absolute right-0 z-50 mt-1 w-52 rounded-xl border bg-white py-1 shadow-xl">
+                <button type="button" onClick={copyLink}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
+                  <Link2 className="h-4 w-4 text-slate-500" /> Copiar enlace
+                </button>
+                <button type="button" onClick={shareWhatsApp}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
+                  <span className="text-base">📱</span> WhatsApp
+                </button>
+                <button type="button" onClick={shareEmail}
+                  className="flex w-full items-center gap-2.5 px-4 py-2.5 text-left text-sm hover:bg-slate-50">
+                  <Mail className="h-4 w-4 text-slate-500" /> Correo electrónico
+                </button>
+              </div>
+            )}
+          </div>
+
           {isAdmin && currentEstado !== "RESUELTO" && (
             editingTicket ? (
               <div className="flex gap-1">

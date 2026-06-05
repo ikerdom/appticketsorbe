@@ -1,8 +1,11 @@
 ﻿"use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { Check, Link2 } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PRIORIDAD_LABELS } from "@/lib/constants";
@@ -42,6 +45,18 @@ export function SortableTicketCard({
   isAdmin?: boolean;
   onTake?: (ticketId: string) => void;
 }) {
+  const [linkCopied, setLinkCopied] = useState(false);
+
+  async function handleCopyLink(e: React.MouseEvent) {
+    e.stopPropagation();
+    const url = `${window.location.origin}/tickets/${ticket.id}`;
+    try { await navigator.clipboard.writeText(url); }
+    catch { const i = document.createElement("input"); i.value = url; document.body.appendChild(i); i.select(); document.execCommand("copy"); document.body.removeChild(i); }
+    setLinkCopied(true);
+    toast.success("Enlace copiado");
+    setTimeout(() => setLinkCopied(false), 2000);
+  }
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: ticket.id,
     data: { estado: ticket.estado }
@@ -123,10 +138,20 @@ export function SortableTicketCard({
         <span className="text-[11px] text-slate-400">{formatRelativeEs(ticket.createdAt)}</span>
       </div>
 
-      <p className="mt-2 text-[11px] text-slate-400 truncate">
-        {categoria ? <>{categoria} · </> : null}
-        <span className="text-indigo-400">{ticket.creador.email}</span>
-      </p>
+      <div className="mt-2 flex items-center justify-between gap-1">
+        <p className="min-w-0 truncate text-[11px] text-slate-400">
+          {categoria ? <>{categoria} · </> : null}
+          <span className="text-indigo-400">{ticket.creador.email}</span>
+        </p>
+        <button
+          type="button"
+          onClick={handleCopyLink}
+          title="Copiar enlace"
+          className="shrink-0 rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition"
+        >
+          {linkCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Link2 className="h-3 w-3" />}
+        </button>
+      </div>
 
       {isAdmin && ticket.estado === "ABIERTO" && onTake ? (
         <button

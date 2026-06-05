@@ -1,14 +1,31 @@
-﻿import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireCurrentPageUser } from "@/lib/data";
 import { puedeVerTicket } from "@/lib/permisos";
 import { TicketDetailView } from "@/components/tickets/ticket-detail-view";
 import { markTicketRead } from "@/lib/lecturas";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+
 export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, select: { titulo: true } });
-  return { title: ticket?.titulo ?? "Ticket" };
+  const ticket = await prisma.ticket.findUnique({
+    where: { id: params.id },
+    select: { titulo: true, descripcion: true, numero: true }
+  });
+  if (!ticket) return { title: "Ticket no encontrado" };
+
+  const num = `#${String(ticket.numero).padStart(4, "0")}`;
+  const title = `Incidencia ${num} — ${ticket.titulo} · Tickets`;
+  const description = ticket.descripcion.slice(0, 160) + (ticket.descripcion.length > 160 ? "…" : "");
+  const url = `${APP_URL}/tickets/${params.id}`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "article", url },
+    twitter: { card: "summary", title, description }
+  };
 }
 
 export default async function TicketDetailPage({ params }: { params: { id: string } }) {
@@ -41,9 +58,8 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
     }
   });
 
-  if (!ticket || !puedeVerTicket(user, ticket)) {
-    notFound();
-  }
+  if (!ticket) notFound();
+  if (!puedeVerTicket(user, ticket)) redirect("/forbidden");
 
   await markTicketRead(ticket.id, user.id);
 
