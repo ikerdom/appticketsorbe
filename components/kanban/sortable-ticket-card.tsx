@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, Link2 } from "lucide-react";
+import { Check, Link2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -143,14 +143,30 @@ export function SortableTicketCard({
           {categoria ? <>{categoria} · </> : null}
           <span className="text-indigo-400">{ticket.creador.email}</span>
         </p>
-        <button
-          type="button"
-          onClick={handleCopyLink}
-          title="Copiar enlace"
-          className="shrink-0 rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition"
-        >
-          {linkCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Link2 className="h-3 w-3" />}
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {ticket._count.comentarios > 0 && (
+            <span className="flex items-center gap-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
+              <MessageCircle className="h-2.5 w-2.5" />
+              {ticket._count.comentarios}
+            </span>
+          )}
+          {ticket.asignado && (
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 text-[9px] font-bold uppercase text-indigo-700 ring-1 ring-indigo-200"
+              title={ticket.asignado.nombre ?? ticket.asignado.name ?? ticket.asignado.email}
+            >
+              {(ticket.asignado.nombre ?? ticket.asignado.name ?? ticket.asignado.email ?? "?").slice(0, 2)}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            title="Copiar enlace"
+            className="rounded p-1 text-slate-300 hover:bg-slate-100 hover:text-slate-600 transition"
+          >
+            {linkCopied ? <Check className="h-3 w-3 text-emerald-500" /> : <Link2 className="h-3 w-3" />}
+          </button>
+        </div>
       </div>
 
       {isAdmin && ticket.estado === "ABIERTO" && onTake ? (
