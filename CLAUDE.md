@@ -149,8 +149,7 @@ SignupRequest   — solicitudes de registro pendientes
 
 - **Imágenes:** base64 guardado en `Adjunto.url` en la BD. Funciona via clipboard paste y drag&drop.
 - **En Vercel (prod):** solo imágenes via JSON+base64. FormData devuelve 501.
-- **PDFs:** NO soportados en producción todavía (ver BUGS.md → B002 y PLAN_MEJORAS.md → P1)
-- `uploadthing@7.4.4` ya está en package.json, pendiente de configurar
+- **PDFs y archivos:** no soportados. Decisión deliberada — no se usa servicio externo de storage.
 
 ---
 
@@ -169,10 +168,6 @@ APP_PORT="3000"
 APP_URL="http://127.0.0.1:3000"
 NEXT_PUBLIC_APP_URL="http://127.0.0.1:3000"
 NOTIFICATIONS_ENABLED=true
-
-# Pendiente configurar para upload real de archivos:
-UPLOADTHING_SECRET=sk_live_...
-UPLOADTHING_APP_ID=...
 ```
 
 ---
@@ -189,7 +184,7 @@ UPLOADTHING_APP_ID=...
 | Notificaciones in-app | ✅ Funciona |
 | Historial/auditoría | ✅ Funciona |
 | Upload imágenes (clipboard) | ✅ Funciona en prod |
-| Upload PDFs y archivos | ❌ No funciona en prod (ver P1) |
+| Upload PDFs y archivos | ⚪ No implementado (decisión deliberada) |
 | Vista pública sin login | ❌ No implementado (ver P2) |
 | Estadísticas avanzadas | ⚠️ Básicas — mejoras en P4 |
 | Exportar CSV | ❌ No implementado (ver P5) |
@@ -232,4 +227,4 @@ npx prisma migrate dev --name nombre_descriptivo
 6. Commit + push
 
 Orden de implementación recomendado:
-**P0 → P3 → P2 → P1 → P5 → P4 → P7 → P6**
+**P0 → P3 → P2 → P5 → P4 → P7 → P6**

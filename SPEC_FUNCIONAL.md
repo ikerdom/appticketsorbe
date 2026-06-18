@@ -238,20 +238,7 @@ SLA timer en tarjeta kanban:
 - En producción (Vercel): SOLO imágenes via JSON+base64. FormData devuelve 501.
 - PDFs: NO soportado
 
-**Estado PLANIFICADO (P1 — alta prioridad):**
-- Imágenes: mantener base64 para simplicidad + añadir uploadthing para archivos > 1MB
-- PDFs: sí, via uploadthing
-- Otros archivos (Word, Excel, ZIP): sí, via uploadthing
-- Límite: 10MB por archivo, máx 5 archivos por ticket (negociable)
-- Tipos permitidos: image/*, application/pdf, .docx, .xlsx, .zip
-- Almacenamiento: uploadthing CDN (URL permanente)
-
-**Variables de entorno necesarias para uploadthing:**
-```
-UPLOADTHING_SECRET=sk_live_...
-UPLOADTHING_APP_ID=...
-```
-Ya están en package.json (`uploadthing@7.4.4`). Solo falta configurar.
+**Nota:** Upload de PDFs y archivos no-imagen no está soportado. Solo imágenes via portapapeles o picker.
 
 ### 3.6 Archivado automático
 

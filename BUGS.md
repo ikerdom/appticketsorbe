@@ -76,48 +76,6 @@ function scheduleSync() {
 
 ---
 
-## B002 — Upload de archivos desactivado en producción (Vercel)
-
-**Estado:** 🔴 ABIERTO — fix planificado en P1 de PLAN_MEJORAS.md
-
-**Severidad:** ALTA
-
-**Descripción:**
-En producción (Vercel), subir archivos via formulario (FormData) devuelve error 501 "No implementado". Solo funciona pegar imágenes desde el portapapeles (base64).
-
-**Causa raíz:**
-`app/api/tickets/[id]/adjuntos/route.ts` línea 65-70:
-```typescript
-if (IS_VERCEL) {
-  return NextResponse.json(
-    { error: "En producción usa el pegado de imágenes desde el portapapeles." },
-    { status: 501 }
-  );
-}
-```
-
-Vercel no tiene sistema de archivos persistente, por lo que el upload local a `/public/uploads/` no funciona. El workaround de base64 en BD solo funciona para imágenes pequeñas.
-
-**Consecuencia:**
-- PDFs: no se pueden subir en ningún entorno de producción
-- Archivos > 1MB via formulario: error en producción
-- Solo imágenes pequeñas via portapapeles funcionan bien en prod
-
-**Fix planificado:**
-Integrar uploadthing (ya instalado como dependencia, solo falta configurar).
-
-```bash
-# Variables de entorno necesarias (en .env y Vercel dashboard):
-UPLOADTHING_SECRET=sk_live_...
-UPLOADTHING_APP_ID=...
-```
-
-El paquete `uploadthing@7.4.4` ya está en `package.json`. Solo necesita:
-1. Crear router de uploadthing en `/app/api/uploadthing/core.ts`
-2. Crear route handler en `/app/api/uploadthing/route.ts`
-3. Actualizar el componente de upload en `new-ticket-form.tsx` y `ticket-detail-view.tsx`
-4. Permitir: `image/*`, `application/pdf`, `.docx`, `.xlsx` — máx 10MB
-
 ---
 
 ## B003 — Confirmación de resolución usa `window.confirm()` nativo
@@ -187,24 +145,6 @@ En la vista móvil (< md), el kanban usa tabs (ABIERTO / EN CURSO / RESUELTO). E
 **Fix:** Ya implementado. Los TabsTrigger muestran `{ESTADO_LABELS[estado]} ({grouped[estado].length})` — ej. "Abierto (3)".
 
 ---
-
-## B006 — Base64 en BD para imágenes es ineficiente
-
-**Estado:** 🟡 EN_ANÁLISIS — pendiente de implementar P1 (uploadthing)
-
-**Severidad:** MEDIA (performance)
-
-**Descripción:**
-Las imágenes se almacenan como base64 directamente en la columna `Adjunto.url` de PostgreSQL (Neon). Esto:
-- Infla el tamaño de la BD
-- Ralentiza las queries que incluyen adjuntos
-- Una imagen de 1MB → ~1.3MB en la BD
-- Con 10 imágenes por ticket y muchos tickets → problema de escalado
-
-**Fix planificado:**
-Con uploadthing (B002), las imágenes también migrarán a CDN externo. La columna `url` pasará a almacenar una URL `https://utfs.io/...` en vez de un data URL base64.
-
-Los adjuntos existentes en base64 se mantendrán funcionando (retrocompatible). Los nuevos usarán uploadthing.
 
 ---
 
