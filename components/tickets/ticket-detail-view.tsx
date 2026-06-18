@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ImagePlus, Link2, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, FileText, Link2, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
 import { formatDateTimeEs } from "@/lib/dates";
 import type { TicketDetailData } from "@/types/ticket";
 import { TicketLifecycle } from "@/components/tickets/ticket-lifecycle";
+import { useUploadThing } from "@/lib/uploadthing";
 
 interface TicketDetailViewProps {
   ticket: TicketDetailData;
@@ -70,6 +71,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { startUpload } = useUploadThing("ticketAttachment");
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -135,8 +137,39 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
-  async function uploadImageFile(file: File) {
-    return new Promise<void>((resolve) => {
+  async function uploadFile(file: File) {
+    // Intentar via uploadthing (soporta imágenes + PDFs + otros)
+    try {
+      const uploaded = await startUpload([file]);
+      if (uploaded?.[0]) {
+        const f = uploaded[0];
+        const res = await fetch(`/api/tickets/${ticket.id}/adjuntos`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            uploadthingUrl: f.ufsUrl,
+            nombre: f.name,
+            tipo: f.type,
+            tamano: f.size
+          })
+        });
+        if (res.ok) {
+          const { adjuntos: [adj] } = await res.json();
+          setAdjuntos((prev) => [...prev, adj]);
+          return;
+        }
+      }
+    } catch {
+      // Fallback a base64 para imágenes si uploadthing no está configurado
+    }
+
+    // Fallback base64 — solo imágenes
+    if (!file.type.startsWith("image/")) {
+      toast.error("Configura uploadthing para subir PDFs y otros archivos.");
+      return;
+    }
+
+    await new Promise<void>((resolve) => {
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const dataUrl = ev.target?.result as string;
@@ -164,6 +197,11 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
+  // Alias para compatibilidad con paste/drag que solo mandan imágenes
+  async function uploadImageFile(file: File) {
+    return uploadFile(file);
+  }
+
   async function handleImagePaste(e: React.ClipboardEvent) {
     const imageFiles = Array.from(e.clipboardData.items)
       .filter((i) => i.type.startsWith("image/"))
@@ -178,12 +216,12 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
+    const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     setUploadingImage(true);
-    for (const file of files) await uploadImageFile(file);
+    for (const file of files) await uploadFile(file);
     setUploadingImage(false);
-    toast.success(files.length === 1 ? "Imagen adjuntada" : `${files.length} imágenes adjuntadas`);
+    toast.success(files.length === 1 ? "Archivo adjuntado" : `${files.length} archivos adjuntados`);
     e.target.value = "";
   }
 
@@ -489,29 +527,45 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 })}
               </div>
 
-              {/* Image gallery */}
-              {adjuntos.filter((a) => a.tipo.startsWith("image/")).length > 0 && (
+              {/* Adjuntos gallery */}
+              {adjuntos.length > 0 && (
                 <div className="flex flex-wrap gap-2 border-t pt-3">
-                  {adjuntos.filter((a) => a.tipo.startsWith("image/")).map((adj) => (
-                    <a
-                      key={adj.id}
-                      href={adj.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative block overflow-hidden rounded-lg border shadow-sm hover:shadow-md transition"
-                      title={adj.nombre}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={adj.url}
-                        alt={adj.nombre}
-                        className="h-28 w-auto max-w-[220px] object-cover transition group-hover:opacity-85"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
-                        <ImagePlus className="h-5 w-5 text-white drop-shadow" />
-                      </div>
-                    </a>
-                  ))}
+                  {adjuntos.map((adj) => {
+                    const esImagen = adj.tipo.startsWith("image/");
+                    const esPdf = adj.tipo === "application/pdf" || adj.nombre.toLowerCase().endsWith(".pdf");
+                    return esImagen ? (
+                      <a
+                        key={adj.id}
+                        href={adj.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative block overflow-hidden rounded-lg border shadow-sm hover:shadow-md transition"
+                        title={adj.nombre}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={adj.url}
+                          alt={adj.nombre}
+                          className="h-28 w-auto max-w-[220px] object-cover transition group-hover:opacity-85"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
+                          <Paperclip className="h-5 w-5 text-white drop-shadow" />
+                        </div>
+                      </a>
+                    ) : (
+                      <a
+                        key={adj.id}
+                        href={adj.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 rounded-lg border bg-slate-50 px-3 py-2 text-sm text-slate-700 shadow-sm hover:bg-slate-100 transition"
+                        title={adj.nombre}
+                      >
+                        <FileText className={`h-5 w-5 shrink-0 ${esPdf ? "text-red-500" : "text-slate-400"}`} />
+                        <span className="max-w-[160px] truncate text-xs">{adj.nombre}</span>
+                      </a>
+                    );
+                  })}
                 </div>
               )}
 
@@ -541,7 +595,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf,.docx,.xlsx,.zip"
                     multiple
                     className="hidden"
                     onChange={handleFileSelect}
@@ -551,13 +605,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadingImage}
                     className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition disabled:opacity-50"
-                    title="Adjuntar imagen"
+                    title="Adjuntar archivo"
                   >
                     <Paperclip className="h-3.5 w-3.5" />
-                    {uploadingImage ? "Subiendo…" : "Imagen"}
+                    {uploadingImage ? "Subiendo…" : "Adjuntar"}
                   </button>
                   <span className="flex-1 text-[11px] text-muted-foreground">
-                    Ctrl+V · arrastra · o haz clic en Imagen
+                    Ctrl+V · arrastra · imágenes, PDF, Word
                   </span>
                   <Button onClick={addComment} disabled={isPending || !comment.trim()}>
                     {isPending ? "Enviando..." : "Enviar"}

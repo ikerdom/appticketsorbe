@@ -8,6 +8,7 @@ import { logTicketAction } from "@/lib/audit";
 
 const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
 const IS_VERCEL = Boolean(process.env.VERCEL);
+const IS_NODE_ENV_PROD = process.env.NODE_ENV === "production";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -22,16 +23,47 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
     const contentType = request.headers.get("content-type") ?? "";
 
-    // ── JSON path: base64 image from clipboard paste ──────────────────────────
+    // ── JSON path: uploadthing URL or base64 image from clipboard ────────────
     if (contentType.includes("application/json")) {
-      const body = (await request.json()) as { filename?: string; tipo?: string; base64?: string };
+      const body = (await request.json()) as {
+        filename?: string;
+        tipo?: string;
+        base64?: string;
+        uploadthingUrl?: string;
+        nombre?: string;
+        tamano?: number;
+      };
+
+      // Path A: archivo ya subido a uploadthing — solo guardar referencia en BD
+      if (body.uploadthingUrl) {
+        const adjunto = await prisma.adjunto.create({
+          data: {
+            nombre: body.nombre || body.filename || "archivo",
+            tipo: body.tipo || "application/octet-stream",
+            tamano: body.tamano || 0,
+            url: body.uploadthingUrl,
+            ticketId: ticket.id
+          }
+        });
+
+        await logTicketAction({
+          ticketId: ticket.id,
+          autorId: user.id,
+          accion: "ADJUNTO_SUBIDO",
+          detalle: { total: 1, tipo: body.tipo, via: "uploadthing" }
+        });
+
+        return NextResponse.json({ adjuntos: [adjunto] }, { status: 201 });
+      }
+
+      // Path B: base64 imagen desde portapapeles (mantener retrocompatibilidad)
       const { filename = "imagen.png", tipo = "image/png", base64 } = body;
 
       if (!base64) {
         return NextResponse.json({ error: "Sin datos de imagen." }, { status: 400 });
       }
       if (!tipo.startsWith("image/")) {
-        return NextResponse.json({ error: "Solo se permiten imágenes." }, { status: 400 });
+        return NextResponse.json({ error: "Solo se permiten imágenes en base64." }, { status: 400 });
       }
 
       const buffer = Buffer.from(base64, "base64");
@@ -61,10 +93,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ adjuntos: [adjunto] }, { status: 201 });
     }
 
-    // ── FormData path: file upload (local dev only) ────────────────────────────
-    if (IS_VERCEL) {
+    // ── FormData path: file upload (local dev only, no Vercel) ────────────────
+    if (IS_VERCEL || IS_NODE_ENV_PROD) {
       return NextResponse.json(
-        { error: "En producción usa el pegado de imágenes desde el portapapeles." },
+        { error: "Usa el botón de adjuntar archivos para subir en producción." },
         { status: 501 }
       );
     }
