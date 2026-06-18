@@ -177,15 +177,14 @@ const SLA_HORAS: Record<Prioridad, number> = {
 
 ## B005 — Tabs de kanban en móvil no muestran badge de contador
 
-**Estado:** 🔴 ABIERTO — fix planificado en P5 de PLAN_MEJORAS.md
+**Estado:** 🟢 RESUELTO — ya implementado en kanban-board.tsx
 
 **Severidad:** MUY BAJA (UX móvil)
 
 **Descripción:**
 En la vista móvil (< md), el kanban usa tabs (ABIERTO / EN CURSO / RESUELTO). El contador de tickets por estado no es visible en los tabs, lo que obliga al usuario a ir tab a tab para ver cuántos hay.
 
-**Fix planificado:**
-Añadir badge numérico en cada tab: `ABIERTO (3)`.
+**Fix:** Ya implementado. Los TabsTrigger muestran `{ESTADO_LABELS[estado]} ({grouped[estado].length})` — ej. "Abierto (3)".
 
 ---
 

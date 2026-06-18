@@ -345,6 +345,17 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
 
           <div className="space-y-2">
             <Label>Prioridad</Label>
+            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 w-fit hover:bg-red-100 transition">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-red-600"
+                onChange={(e) => {
+                  form.setValue("prioridad", e.target.checked ? "ALTA" : "MEDIA", { shouldValidate: true });
+                }}
+              />
+              <span className="text-sm font-semibold text-red-700">⚠ Es urgente</span>
+              <span className="text-xs text-red-400">(prioridad Alta)</span>
+            </label>
             <div className="inline-flex flex-wrap gap-2" role="radiogroup" aria-label="Prioridad">
               {PRIORIDAD_ORDER.map((prioridad) => (
                 <button

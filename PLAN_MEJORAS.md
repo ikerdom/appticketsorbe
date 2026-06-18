@@ -15,7 +15,7 @@ Versión: 2.0 · Fecha: 2026-06-18
 | [P3](#p3--3-admins--acceso-simplificado) | 3 admins + acceso simplificado | 🟠 ALTA | Bajo (1h) | ✅ HECHO |
 | [P4](#p4--estadísticas-mejoradas) | Estadísticas mejoradas | 🟡 MEDIA | Medio (6h) | ✅ ya existía |
 | [P5](#p5--exportar-incidencias-csv) | Exportar incidencias CSV | 🟡 MEDIA | Bajo (3h) | ✅ HECHO |
-| [P6](#p6--ux-general--comodidad) | UX general — comodidad | 🟢 BAJA | Bajo (4h) | ✅ HECHO (parcial: Dialog + SLA) |
+| [P6](#p6--ux-general--comodidad) | UX general — comodidad | 🟢 BAJA | Bajo (4h) | ✅ HECHO (Dialog + SLA + urgente checkbox + CRÍTICA pulse) |
 | [P7](#p7--sla-por-prioridad) | SLA por prioridad (no hardcoded) | 🟢 BAJA | Bajo (1h) | ✅ HECHO |
 
 **Orden de implementación recomendado:** P0 → P3 → P2 → P1 → P5 → P4 → P7 → P6

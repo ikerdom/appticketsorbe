@@ -21,14 +21,14 @@ const SLA_HORAS: Record<string, number> = {
 };
 
 /** Returns SLA status based on ticket age vs. priority-specific SLA limit */
-function getSlaStatus(createdAt: Date, estado: string, prioridad: string): { label: string; color: string; ring: string } | null {
+function getSlaStatus(createdAt: Date, estado: string, prioridad: string): { label: string; color: string; ring: string; pulse?: boolean } | null {
   if (estado === "RESUELTO") return null;
   const hours = (Date.now() - new Date(createdAt).getTime()) / 3600000;
   const limit = SLA_HORAS[prioridad] ?? 72;
   const label = hours < 24 ? `${Math.round(hours)}h` : `${Math.floor(hours / 24)}d`;
   if (hours < limit * 0.5) return { label, color: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-200" };
   if (hours < limit) return { label, color: "bg-amber-100 text-amber-700", ring: "ring-amber-200" };
-  return { label: `${label} ⚠`, color: "bg-red-100 text-red-700", ring: "ring-red-200" };
+  return { label: `${label} ⚠`, color: "bg-red-100 text-red-700", ring: "ring-red-200", pulse: prioridad === "CRITICA" };
 }
 
 const PRIORIDAD_DOT: Record<Prioridad, string> = {
@@ -106,7 +106,7 @@ export function SortableTicketCard({
         </div>
         <div className="flex items-center gap-1.5">
           {sla && (
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ${sla.color} ${sla.ring}`}>
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ${sla.color} ${sla.ring} ${sla.pulse ? "animate-pulse" : ""}`}>
               {sla.label}
             </span>
           )}
