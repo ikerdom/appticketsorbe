@@ -13,13 +13,22 @@ import { formatRelativeEs } from "@/lib/dates";
 import type { TicketCardData } from "@/types/ticket";
 import type { Prioridad } from "@prisma/client";
 
-/** Returns SLA status based on ticket age in hours */
-function getSlaStatus(createdAt: Date, estado: string): { label: string; color: string; ring: string } | null {
+const SLA_HORAS: Record<string, number> = {
+  CRITICA: 4,
+  ALTA: 24,
+  MEDIA: 72,
+  BAJA: 120
+};
+
+/** Returns SLA status based on ticket age vs. priority-specific SLA limit */
+function getSlaStatus(createdAt: Date, estado: string, prioridad: string): { label: string; color: string; ring: string } | null {
   if (estado === "RESUELTO") return null;
   const hours = (Date.now() - new Date(createdAt).getTime()) / 3600000;
-  if (hours < 24) return { label: `${Math.round(hours)}h`, color: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-200" };
-  if (hours < 72) return { label: `${Math.floor(hours / 24)}d`, color: "bg-amber-100 text-amber-700", ring: "ring-amber-200" };
-  return { label: `${Math.floor(hours / 24)}d ⚠`, color: "bg-red-100 text-red-700", ring: "ring-red-200" };
+  const limit = SLA_HORAS[prioridad] ?? 72;
+  const label = hours < 24 ? `${Math.round(hours)}h` : `${Math.floor(hours / 24)}d`;
+  if (hours < limit * 0.5) return { label, color: "bg-emerald-100 text-emerald-700", ring: "ring-emerald-200" };
+  if (hours < limit) return { label, color: "bg-amber-100 text-amber-700", ring: "ring-amber-200" };
+  return { label: `${label} ⚠`, color: "bg-red-100 text-red-700", ring: "ring-red-200" };
 }
 
 const PRIORIDAD_DOT: Record<Prioridad, string> = {
@@ -49,11 +58,11 @@ export function SortableTicketCard({
 
   async function handleCopyLink(e: React.MouseEvent) {
     e.stopPropagation();
-    const url = `${window.location.origin}/tickets/${ticket.id}`;
+    const url = `${window.location.origin}/public/tickets/t/${ticket.numero}`;
     try { await navigator.clipboard.writeText(url); }
     catch { const i = document.createElement("input"); i.value = url; document.body.appendChild(i); i.select(); document.execCommand("copy"); document.body.removeChild(i); }
     setLinkCopied(true);
-    toast.success("Enlace copiado");
+    toast.success("Enlace público copiado");
     setTimeout(() => setLinkCopied(false), 2000);
   }
 
@@ -74,7 +83,7 @@ export function SortableTicketCard({
   const destinos = ticket.destinos.filter((dest) => !dest.empresa.isGlobalTarget);
   const principal = destinos[0]?.empresa ?? ticket.empresaDestino;
   const categoria = ticket.categoriaCustom || ticket.categoria;
-  const sla = getSlaStatus(ticket.createdAt, ticket.estado);
+  const sla = getSlaStatus(ticket.createdAt, ticket.estado, ticket.prioridad);
 
   return (
     <Card

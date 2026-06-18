@@ -60,29 +60,24 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" }
     });
 
-    const headers = [
-      "numero",
-      "titulo",
-      "estado",
-      "prioridad",
-      "categoria",
-      "empresa_origen",
-      "empresa_destino",
-      "persona_o_recurso",
-      "contacto_telefono",
-      "contacto_email",
-      "contacto_url_referencia",
-      "contacto_notas",
-      "creador",
-      "asignado",
-      "fecha_creacion",
-      "fecha_resolucion",
-      "horas_dedicadas",
-      "como_se_resolvio",
-      "num_comentarios"
+    const SEP = ";"; // Punto y coma — Excel español lo detecta correctamente
+    const BOM = "﻿"; // UTF-8 BOM para que Excel no muestre caracteres rotos
+
+    function fmtDate(d: Date | null | undefined) {
+      if (!d) return "";
+      return new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short" }).format(d);
+    }
+
+    const colHeaders = [
+      "Número", "Título", "Estado", "Prioridad", "Categoría",
+      "Empresa origen", "Empresa destino",
+      "Persona/recurso afectado", "Teléfono", "Email contacto", "Referencia/URL", "Notas contacto",
+      "Creado por", "Asignado a",
+      "Fecha creación", "Fecha resolución", "Horas dedicadas",
+      "Nota resolución", "Comentarios"
     ];
 
-    const lines = [headers.join(",")];
+    const lines = [colHeaders.map(csvEscape).join(SEP)];
     for (const t of tickets) {
       lines.push(
         [
@@ -93,28 +88,29 @@ export async function GET(request: NextRequest) {
           t.categoriaCustom || t.categoria,
           t.empresaOrigen.nombre,
           Array.from(new Set(t.destinos.map((d) => d.empresa.nombre))).join(" | ") || t.empresaDestino.nombre,
-          t.contactoNombre || t.personaAfectada,
-          t.contactoTelefono,
-          t.contactoEmail,
-          t.contactoReferencia,
-          t.contactoNotas,
+          t.contactoNombre || t.personaAfectada || "",
+          t.contactoTelefono || "",
+          t.contactoEmail || "",
+          t.contactoReferencia || "",
+          t.contactoNotas || "",
           t.creador.nombre || t.creador.name || t.creador.email,
-          t.asignado ? t.asignado.nombre || t.asignado.name || t.asignado.email : "",
-          t.createdAt.toISOString(),
-          t.resueltoAt?.toISOString() || "",
+          t.asignado ? (t.asignado.nombre || t.asignado.name || t.asignado.email) : "",
+          fmtDate(t.createdAt),
+          fmtDate(t.resueltoAt),
           t.horasDedicadas ?? "",
           t.notaResolucion || "",
           t._count.comentarios
         ]
           .map(csvEscape)
-          .join(",")
+          .join(SEP)
       );
     }
 
-    return new NextResponse(lines.join("\n"), {
+    const today = new Date().toISOString().split("T")[0];
+    return new NextResponse(BOM + lines.join("\n"), {
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": "attachment; filename=tickets.csv"
+        "Content-Disposition": `attachment; filename="incidencias_${today}.csv"`
       }
     });
   } catch {

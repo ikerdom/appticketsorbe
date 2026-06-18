@@ -1,0 +1,246 @@
+# Bug Tracker — AppTickets
+
+Registro de bugs conocidos, su causa y el fix planificado.
+Última actualización: 2026-06-18
+
+---
+
+## Leyenda de estados
+
+| Estado | Significado |
+|--------|-------------|
+| 🔴 ABIERTO | Bug confirmado, sin fix |
+| 🟡 EN_ANÁLISIS | Causa identificada, fix en progreso |
+| 🟢 RESUELTO | Fix aplicado y en producción |
+| ⚪ DESCARTADO | No reproducible o no es bug |
+
+---
+
+## B001 — Tickets fantasma en kanban tras mover estado
+
+**Estado:** 🟢 RESUELTO — 2026-06-18
+
+**Severidad:** CRÍTICA
+
+**Descripción:**
+Al mover un ticket a otro estado en el kanban (especialmente a RESUELTO), aparecen 2-3 tickets de una "versión antigua" que ya deberían estar resueltos pero reaparecen como ABIERTOS. Desaparecen al refrescar la página manualmente.
+
+**Reproducción:**
+1. Tener 7+ tickets en el kanban
+2. Arrastrar uno a RESUELTO y confirmar
+3. Esperar ~2 segundos
+4. Observar tickets fantasma que aparecen en columnas incorrectas
+
+**Causa raíz identificada:**
+`backgroundSync()` en `components/kanban/kanban-board.tsx` (línea ~200).
+
+Secuencia de eventos que causa el bug:
+```
+1. onDragEnd() → optimistic update correcto en estado React
+2. PATCH /api/tickets/{id}/estado → escribe en Neon ✓
+3. scheduleSync() → setTimeout 1500ms
+4. backgroundSync() → GET /api/tickets (cache: "no-store")
+5. Neon connection pool devuelve datos PRE-escritura (read-after-write race)
+6. setTickets(data.tickets) reemplaza TODO el estado con datos stale
+7. Resultado: tickets optimisticamente movidos vuelven a su estado anterior
+```
+
+El problema es la combinación de:
+- Neon serverless con connection pooling (reads pueden ir a réplicas no actualizadas)
+- `backgroundSync` reemplaza el estado React completo en vez de hacer merge
+- 1500ms no siempre es suficiente para que Neon propague la escritura
+
+**Fix propuesto:**
+Reemplazar `backgroundSync()` + `scheduleSync()` por `router.refresh()` del App Router.
+
+```typescript
+// kanban-board.tsx — ANTES
+function scheduleSync() {
+  setTimeout(() => { void backgroundSync(); }, 1500);
+}
+
+// kanban-board.tsx — DESPUÉS
+import { useRouter } from "next/navigation";
+const router = useRouter();
+
+function scheduleSync() {
+  setTimeout(() => router.refresh(), 800);
+}
+```
+
+`router.refresh()` re-ejecuta el Server Component desde el servidor con una query Prisma directa al primary de Neon, sin pasar por el pool cliente. El estado React del componente se preserva durante el refresh.
+
+**Archivos a modificar:**
+- `components/kanban/kanban-board.tsx` — reemplazar `backgroundSync` + `scheduleSync`
+- Eliminar la función `backgroundSync` completa (ya no es necesaria)
+
+---
+
+## B002 — Upload de archivos desactivado en producción (Vercel)
+
+**Estado:** 🔴 ABIERTO — fix planificado en P1 de PLAN_MEJORAS.md
+
+**Severidad:** ALTA
+
+**Descripción:**
+En producción (Vercel), subir archivos via formulario (FormData) devuelve error 501 "No implementado". Solo funciona pegar imágenes desde el portapapeles (base64).
+
+**Causa raíz:**
+`app/api/tickets/[id]/adjuntos/route.ts` línea 65-70:
+```typescript
+if (IS_VERCEL) {
+  return NextResponse.json(
+    { error: "En producción usa el pegado de imágenes desde el portapapeles." },
+    { status: 501 }
+  );
+}
+```
+
+Vercel no tiene sistema de archivos persistente, por lo que el upload local a `/public/uploads/` no funciona. El workaround de base64 en BD solo funciona para imágenes pequeñas.
+
+**Consecuencia:**
+- PDFs: no se pueden subir en ningún entorno de producción
+- Archivos > 1MB via formulario: error en producción
+- Solo imágenes pequeñas via portapapeles funcionan bien en prod
+
+**Fix planificado:**
+Integrar uploadthing (ya instalado como dependencia, solo falta configurar).
+
+```bash
+# Variables de entorno necesarias (en .env y Vercel dashboard):
+UPLOADTHING_SECRET=sk_live_...
+UPLOADTHING_APP_ID=...
+```
+
+El paquete `uploadthing@7.4.4` ya está en `package.json`. Solo necesita:
+1. Crear router de uploadthing en `/app/api/uploadthing/core.ts`
+2. Crear route handler en `/app/api/uploadthing/route.ts`
+3. Actualizar el componente de upload en `new-ticket-form.tsx` y `ticket-detail-view.tsx`
+4. Permitir: `image/*`, `application/pdf`, `.docx`, `.xlsx` — máx 10MB
+
+---
+
+## B003 — Confirmación de resolución usa `window.confirm()` nativo
+
+**Estado:** 🟢 RESUELTO — 2026-06-18 (reemplazado por Dialog propio en components/ui/dialog.tsx)
+
+**Severidad:** BAJA (UX)
+
+**Descripción:**
+Al mover un ticket a RESUELTO, el navegador muestra el diálogo nativo `window.confirm()` que:
+- No se puede personalizar visualmente
+- En móvil tiene aspecto inconsistente con el resto de la app
+- Bloquea el thread principal del navegador
+
+**Reproducción:**
+Arrastrar cualquier ticket a la columna RESUELTO en el kanban.
+
+**Causa:**
+`kanban-board.tsx` línea ~267:
+```typescript
+const ok = window.confirm("¿Confirmas marcar este ticket como resuelto?");
+if (!ok) return;
+```
+
+**Fix planificado:**
+Reemplazar por un Dialog de shadcn/ui con:
+- Título: "Marcar como resuelto"
+- Texto: "¿Confirmas que este ticket está completamente resuelto? Se notificará al creador."
+- Campo opcional: "Nota de resolución" (textarea)
+- Botones: "Cancelar" (outline) | "Marcar resuelto" (green solid)
+
+---
+
+## B004 — SLA timer hardcodeado a 72h para todos los niveles
+
+**Estado:** 🟢 RESUELTO — 2026-06-18 (SLA por prioridad en sortable-ticket-card.tsx)
+
+**Severidad:** BAJA
+
+**Descripción:**
+El timer de SLA en las tarjetas del kanban cambia a rojo cuando el ticket lleva más de 72h sin resolver, independientemente de la prioridad. Un ticket CRÍTICO debería ponerse en rojo a las 4h, no a las 72h.
+
+**Causa:**
+`components/kanban/sortable-ticket-card.tsx` — lógica de SLA fija a 72h.
+
+**Fix planificado:**
+```typescript
+const SLA_HORAS: Record<Prioridad, number> = {
+  CRITICA: 4,
+  ALTA: 24,
+  MEDIA: 72,
+  BAJA: 120  // 5 días
+};
+```
+
+---
+
+## B005 — Tabs de kanban en móvil no muestran badge de contador
+
+**Estado:** 🔴 ABIERTO — fix planificado en P5 de PLAN_MEJORAS.md
+
+**Severidad:** MUY BAJA (UX móvil)
+
+**Descripción:**
+En la vista móvil (< md), el kanban usa tabs (ABIERTO / EN CURSO / RESUELTO). El contador de tickets por estado no es visible en los tabs, lo que obliga al usuario a ir tab a tab para ver cuántos hay.
+
+**Fix planificado:**
+Añadir badge numérico en cada tab: `ABIERTO (3)`.
+
+---
+
+## B006 — Base64 en BD para imágenes es ineficiente
+
+**Estado:** 🟡 EN_ANÁLISIS — pendiente de implementar P1 (uploadthing)
+
+**Severidad:** MEDIA (performance)
+
+**Descripción:**
+Las imágenes se almacenan como base64 directamente en la columna `Adjunto.url` de PostgreSQL (Neon). Esto:
+- Infla el tamaño de la BD
+- Ralentiza las queries que incluyen adjuntos
+- Una imagen de 1MB → ~1.3MB en la BD
+- Con 10 imágenes por ticket y muchos tickets → problema de escalado
+
+**Fix planificado:**
+Con uploadthing (B002), las imágenes también migrarán a CDN externo. La columna `url` pasará a almacenar una URL `https://utfs.io/...` en vez de un data URL base64.
+
+Los adjuntos existentes en base64 se mantendrán funcionando (retrocompatible). Los nuevos usarán uploadthing.
+
+---
+
+## Bugs resueltos (histórico)
+
+*(vacío — a completar con los fixes que se vayan aplicando)*
+
+| ID | Descripción | Fix aplicado | Fecha |
+|----|-------------|--------------|-------|
+| — | — | — | — |
+
+---
+
+## Cómo reportar un bug nuevo
+
+Para añadir un bug a este fichero, usar esta plantilla:
+
+```markdown
+## B00X — Título corto
+
+**Estado:** 🔴 ABIERTO
+
+**Severidad:** CRÍTICA / ALTA / MEDIA / BAJA / MUY BAJA (UX)
+
+**Descripción:**
+Qué pasa.
+
+**Reproducción:**
+1. Paso 1
+2. Paso 2
+3. ...
+
+**Causa raíz identificada:**
+Dónde está el problema en el código (archivo + línea si se sabe).
+
+**Fix planificado:**
+Qué hay que cambiar.
+```

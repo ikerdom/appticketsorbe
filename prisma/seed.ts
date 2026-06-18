@@ -11,6 +11,23 @@ const ACTIVE_COMPANIES = [
   { nombre: "Veprix", dominio: "veprix.com", color: "#059669", descripcionCorta: "Operaciones comerciales" }
 ] as const;
 
+// ── Admins canónicos ─────────────────────────────────────────────────────────
+// Añadir aquí los emails y nombres de los 3 admins del sistema.
+// Todos usarán la misma contraseña definida en INITIAL_ADMIN_PASSWORD (.env).
+// El seed es idempotente: se puede ejecutar varias veces sin duplicar datos.
+const CANONICAL_ADMINS: { email: string; nombre: string; empresaDominio: keyof typeof EMPRESA_DOMINIO_MAP }[] = [
+  { email: "iker.dominguez@entenova.gnosis.com", nombre: "Iker Dominguez", empresaDominio: "entenova.com" },
+  // { email: "segundo.admin@dominio.com", nombre: "Nombre Admin 2", empresaDominio: "orbe.es" },
+  // { email: "tercer.admin@dominio.com",  nombre: "Nombre Admin 3", empresaDominio: "editorialcep.com" },
+];
+
+const EMPRESA_DOMINIO_MAP = {
+  "entenova.com": "entenova.com",
+  "orbe.es": "orbe.es",
+  "editorialcep.com": "editorialcep.com",
+  "veprix.com": "veprix.com",
+} as const;
+
 const IKER_CANONICAL_EMAIL = "iker.dominguez@entenova.gnosis.com";
 const IKER_LEGACY_EMAILS = ["iker.dominguez@entenova.com", "iker.dominguez@entenova-gnosis.com"];
 const IKER_NAME = "Iker Dominguez";
@@ -252,7 +269,49 @@ async function ensureJose(orbeId: string) {
   });
 }
 
-async function cleanupObsoleteAdmins(orbeId: string, ikerId: string) {
+// Crea o actualiza todos los admins canónicos. Devuelve sus IDs.
+async function ensureAdmins(companyIds: Map<string, string>): Promise<string[]> {
+  const passwordHash = await bcrypt.hash(ADMIN_PASSWORD, 12);
+  const adminIds: string[] = [];
+
+  for (const admin of CANONICAL_ADMINS) {
+    const empresaId = companyIds.get(admin.empresaDominio);
+    if (!empresaId) {
+      console.warn(`Empresa no encontrada para dominio ${admin.empresaDominio} — admin ${admin.email} omitido`);
+      continue;
+    }
+
+    const user = await prisma.user.upsert({
+      where: { email: admin.email },
+      update: {
+        nombre: admin.nombre,
+        name: admin.nombre,
+        empresaId,
+        rol: Rol.ADMIN,
+        activo: true,
+        passwordHash,
+        mustChangePassword: false
+      },
+      create: {
+        email: admin.email,
+        nombre: admin.nombre,
+        name: admin.nombre,
+        empresaId,
+        rol: Rol.ADMIN,
+        activo: true,
+        passwordHash,
+        mustChangePassword: false
+      }
+    });
+
+    adminIds.push(user.id);
+  }
+
+  return adminIds;
+}
+
+async function cleanupObsoleteAdmins(orbeId: string, canonicalAdminIds: string[]) {
+  // Desactivar admins obsoletos conocidos
   const obsoleteUsers = await prisma.user.findMany({
     where: { email: { in: OBSOLETE_ADMIN_EMAILS } },
     select: { id: true, email: true }
@@ -271,9 +330,10 @@ async function cleanupObsoleteAdmins(orbeId: string, ikerId: string) {
     });
   }
 
+  // Degradar a USER cualquier admin que NO esté en la lista canónica
   await prisma.user.updateMany({
     where: {
-      id: { not: ikerId },
+      id: { notIn: canonicalAdminIds },
       rol: Rol.ADMIN
     },
     data: {
@@ -283,8 +343,9 @@ async function cleanupObsoleteAdmins(orbeId: string, ikerId: string) {
     }
   });
 
+  // Limpiar passwordHash de usuarios normales (no deben tener contraseña)
   await prisma.user.updateMany({
-    where: { id: { not: ikerId }, rol: Rol.USER },
+    where: { id: { notIn: canonicalAdminIds }, rol: Rol.USER },
     data: {
       passwordHash: null,
       mustChangePassword: false
@@ -454,15 +515,25 @@ async function main() {
   await consolidateOrbe(orbeId);
   await archiveLegacyCompanies();
 
-  const iker = await ensureCanonicalIker(entenovaId);
-  await cleanupObsoleteAdmins(orbeId, iker.id);
+  // Migración legacy: asegurar Iker con email canónico antes de ensureAdmins
+  await ensureCanonicalIker(entenovaId);
+
+  // Crear/actualizar todos los admins canónicos
+  const adminIds = await ensureAdmins(companyIds);
+  if (!adminIds.length) throw new Error("No se pudo crear ningún admin.");
+
+  await cleanupObsoleteAdmins(orbeId, adminIds);
   await ensureJose(orbeId);
-  await seedDemoData(companyIds, iker.id);
+
+  const ikerUser = await prisma.user.findUnique({ where: { email: IKER_CANONICAL_EMAIL }, select: { id: true } });
+  if (ikerUser) await seedDemoData(companyIds, ikerUser.id);
 
   console.log("============================================================");
-  console.log("ADMIN INICIAL LISTO");
-  console.log(`Email:       ${IKER_CANONICAL_EMAIL}`);
-  console.log(`Contrasena:  ${ADMIN_PASSWORD}`);
+  console.log(`ADMINS CONFIGURADOS: ${CANONICAL_ADMINS.length}`);
+  for (const admin of CANONICAL_ADMINS) {
+    console.log(`  · ${admin.email}`);
+  }
+  console.log(`Contraseña:  ${ADMIN_PASSWORD}`);
   console.log("============================================================");
 }
 

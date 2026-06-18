@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { DndContext, PointerSensor, closestCenter, pointerWithin, useDroppable, useSensor, useSensors, type CollisionDetection } from "@dnd-kit/core";
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -8,6 +9,8 @@ import { Estado, Prioridad } from "@prisma/client";
 import { ChevronDown, ChevronUp, Plus, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
@@ -83,11 +86,12 @@ const CATEGORY_OPTIONS = ["Emails", "Seguridad", "Técnico", "Máquina", "Impres
 
 export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, currentUserEmpresaId, initialEmpresaFilter }: KanbanBoardProps) {
   // Full list of tickets — only replaced after DnD state changes
+  const router = useRouter();
   const [tickets, setTickets] = useState<TicketCardData[]>(initialTickets);
   const [activeTab, setActiveTab] = useState<Estado>("ABIERTO");
   const [showHistorico, setShowHistorico] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [draggingOver, setDraggingOver] = useState<Estado | null>(null);
+  const [confirmPending, setConfirmPending] = useState<{ ticketId: string; targetEstado: Estado; previous: TicketCardData[] } | null>(null);
 
   // Client-side filters — no API call on change
   const [filters, setFilters] = useState({
@@ -191,22 +195,10 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     [grouped, currentUserEmpresaId, isAdmin]
   );
 
-  // Merge a single updated ticket into state (no full replace → no flash)
-  function mergeTicket(updated: TicketCardData) {
-    setTickets((prev) => prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t)));
-  }
-
-  // Full refresh — only used as a delayed background sync (multi-user)
-  async function backgroundSync() {
-    const response = await fetch(`/api/tickets`, { cache: "no-store" });
-    if (!response.ok) return;
-    const data = await response.json();
-    startTransition(() => setTickets(data.tickets ?? []));
-  }
-
-  // Schedule a background sync after a short delay (avoids read-after-write race on Neon)
+  // Re-runs the Server Component via Next.js App Router — fresh Prisma query,
+  // no read-after-write race on Neon, React state is preserved during the refresh.
   function scheduleSync() {
-    setTimeout(() => { void backgroundSync(); }, 1500);
+    setTimeout(() => router.refresh(), 800);
   }
 
   async function handleTake(ticketId: string) {
@@ -262,21 +254,27 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
     if (targetEstado === fromTicket.estado) return;
 
-    if (targetEstado === "RESUELTO") {
-      const ok = window.confirm("¿Confirmas marcar este ticket como resuelto?");
-      if (!ok) return;
-    }
-
-    // Optimistic update — set resueltoAt so ticket doesn't fall into historico (>3d cutoff)
     const previous = tickets;
     const now = new Date();
+
+    if (targetEstado === "RESUELTO") {
+      // Optimistic update first so the card moves visually
+      setTickets(tickets.map((t) =>
+        t.id === ticketId ? { ...t, estado: targetEstado, resueltoAt: now, updatedAt: now } : t
+      ));
+      // Then ask for confirmation via dialog
+      setConfirmPending({ ticketId, targetEstado, previous });
+      return;
+    }
+
+    // Non-RESUELTO moves: proceed directly with optimistic update
     setTickets(tickets.map((t) =>
       t.id === ticketId
         ? {
             ...t,
             estado: targetEstado,
             asignadoId: canTakeByDrag ? currentUserId : t.asignadoId,
-            resueltoAt: targetEstado === "RESUELTO" ? now : (targetEstado === "ABIERTO" ? null : t.resueltoAt),
+            resueltoAt: targetEstado === "ABIERTO" ? null : t.resueltoAt,
             updatedAt: now
           }
         : t
@@ -299,8 +297,55 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     scheduleSync();
   }
 
+  const confirmResolve = useCallback(async () => {
+    if (!confirmPending) return;
+    const { ticketId, targetEstado, previous } = confirmPending;
+    setConfirmPending(null);
+
+    const response = await fetch(`/api/tickets/${ticketId}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: targetEstado })
+    });
+
+    if (!response.ok) {
+      setTickets(previous);
+      const body = await response.json().catch(() => ({ error: "No se pudo resolver el ticket" }));
+      toast.error(body.error ?? "No se pudo resolver el ticket");
+      return;
+    }
+
+    toast.success("Ticket marcado como resuelto");
+    scheduleSync();
+  }, [confirmPending]);
+
+  const cancelResolve = useCallback(() => {
+    if (!confirmPending) return;
+    setTickets(confirmPending.previous);
+    setConfirmPending(null);
+  }, [confirmPending]);
+
   return (
     <div className="space-y-4">
+      <Dialog
+        open={confirmPending !== null}
+        onClose={cancelResolve}
+        title="¿Marcar como resuelto?"
+        description="El ticket se cerrará y se notificará al creador. Puedes añadir una nota de resolución desde el detalle del ticket."
+      >
+        <DialogActions>
+          <Button type="button" variant="outline" onClick={cancelResolve}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            onClick={confirmResolve}
+          >
+            Marcar resuelto
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Card className="rounded-xl border-0 bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
         <div className="mb-3 flex items-center gap-2 text-sm text-slate-600">
           <SlidersHorizontal className="h-4 w-4" />
@@ -362,7 +407,6 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
           </div>
         ) : null}
 
-        {isPending && <p className="mt-2 text-xs text-muted-foreground">Actualizando…</p>}
       </Card>
 
       {visibleTickets.length === 0 ? (

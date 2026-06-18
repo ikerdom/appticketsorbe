@@ -254,7 +254,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   }
 
   function getTicketUrl() {
-    return `${window.location.origin}/tickets/${ticket.id}`;
+    return `${window.location.origin}/public/tickets/t/${ticket.numero}`;
   }
 
   async function copyLink() {
