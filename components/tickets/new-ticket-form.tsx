@@ -6,10 +6,9 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { FileText, Lock, Paperclip, UserRound, X } from "lucide-react";
+import { ImagePlus, Lock, Paperclip, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
-import { useUploadThing } from "@/lib/uploadthing";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,32 +50,21 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const [error, setError] = useState<string | null>(null);
   const [categoriaInput, setCategoriaInput] = useState("");
 
-  // Attachments — images get preview, PDFs and others get icon
-  const [pendingFiles, setPendingFiles] = useState<{ file: File; preview: string | null; esImagen: boolean }[]>([]);
+  // Image attachments — held in memory until ticket is created
+  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { startUpload, isUploading } = useUploadThing("ticketAttachment");
-
-  const ACCEPTED_TYPES = ["image/*", "application/pdf", ".docx", ".xlsx", ".zip"];
-  const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-
-  function addFiles(files: File[]) {
-    const tooLarge = files.filter((f) => f.size > MAX_SIZE);
-    if (tooLarge.length) toast.error(`${tooLarge.map((f) => f.name).join(", ")} supera el límite y no se añadirá`);
-    const valid = files.filter((f) => f.size <= MAX_SIZE).slice(0, 15);
-    setPendingFiles((prev) => [
-      ...prev,
-      ...valid.map((file) => {
-        const esImagen = file.type.startsWith("image/");
-        return { file, preview: esImagen ? URL.createObjectURL(file) : null, esImagen };
-      })
-    ]);
-  }
-
-  // Mantener compatibilidad con addImageFiles para paste/drag
   function addImageFiles(files: File[]) {
-    addFiles(files.filter((f) => f.type.startsWith("image/")));
+    const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
+    if (!imgs.length) return;
+    const tooLarge = imgs.filter((f) => f.size > 4 * 1024 * 1024);
+    if (tooLarge.length) { toast.error("Alguna imagen supera 4 MB y no se añadirá"); }
+    const valid = imgs.filter((f) => f.size <= 4 * 1024 * 1024);
+    setPendingImages((prev) => [
+      ...prev,
+      ...valid.map((file) => ({ file, preview: URL.createObjectURL(file) }))
+    ]);
   }
 
   function handlePaste(e: React.ClipboardEvent) {
@@ -91,42 +79,19 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    addFiles(Array.from(e.target.files ?? []));
+    addImageFiles(Array.from(e.target.files ?? []));
     e.target.value = "";
   }
 
-  function removeFile(idx: number) {
-    setPendingFiles((prev) => {
-      if (prev[idx].preview) URL.revokeObjectURL(prev[idx].preview!);
+  function removeImage(idx: number) {
+    setPendingImages((prev) => {
+      URL.revokeObjectURL(prev[idx].preview);
       return prev.filter((_, i) => i !== idx);
     });
   }
 
-  async function uploadPendingFiles(ticketId: string) {
-    if (!pendingFiles.length) return;
-
-    // Intentar via uploadthing primero
-    try {
-      const uploaded = await startUpload(pendingFiles.map((f) => f.file));
-      for (const file of uploaded ?? []) {
-        await fetch(`/api/tickets/${ticketId}/adjuntos`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            uploadthingUrl: file.ufsUrl,
-            nombre: file.name,
-            tipo: file.type,
-            tamano: file.size
-          })
-        }).catch(() => null);
-      }
-      return;
-    } catch {
-      // Fallback base64 solo para imágenes si uploadthing falla
-    }
-
-    for (const { file, esImagen } of pendingFiles) {
-      if (!esImagen) continue; // sin uploadthing no podemos subir PDFs
+  async function uploadPendingImages(ticketId: string) {
+    for (const { file } of pendingImages) {
       await new Promise<void>((resolve) => {
         const reader = new FileReader();
         reader.onload = async (ev) => {
@@ -218,9 +183,9 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
 
       const { ticket } = await response.json();
 
-      // Upload pending files (non-blocking — ticket already created)
-      if (pendingFiles.length > 0) {
-        await uploadPendingFiles(ticket.id);
+      // Upload pending images (non-blocking — ticket already created)
+      if (pendingImages.length > 0) {
+        await uploadPendingImages(ticket.id);
       }
 
       toast.success("Ticket creado correctamente");
@@ -303,15 +268,8 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
               <span>{descripcion.length} caracteres</span>
             </div>
 
-            {/* File picker */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,application/pdf,.docx,.xlsx,.zip"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
-            />
+            {/* Image picker */}
+            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -319,28 +277,21 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
                 className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
               >
                 <Paperclip className="h-3.5 w-3.5" />
-                Adjuntar archivo
+                Adjuntar imagen
               </button>
-              <span className="text-[11px] text-muted-foreground">imágenes, PDF, Word · o Ctrl+V · arrastra</span>
+              <span className="text-[11px] text-muted-foreground">o Ctrl+V · arrastra sobre la descripción</span>
             </div>
 
-            {/* Pending file thumbnails */}
-            {pendingFiles.length > 0 && (
+            {/* Pending image thumbnails */}
+            {pendingImages.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
-                {pendingFiles.map(({ preview, file, esImagen }, idx) => (
-                  <div key={idx} className="group relative overflow-hidden rounded-lg border shadow-sm bg-white">
-                    {esImagen && preview ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={preview} alt={file.name} className="h-24 w-auto max-w-[180px] object-cover" />
-                    ) : (
-                      <div className="flex h-24 w-28 flex-col items-center justify-center gap-1 px-2">
-                        <FileText className="h-8 w-8 text-red-400" />
-                        <span className="line-clamp-2 text-center text-[10px] text-slate-500">{file.name}</span>
-                      </div>
-                    )}
+                {pendingImages.map(({ preview }, idx) => (
+                  <div key={idx} className="group relative overflow-hidden rounded-lg border shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={preview} alt={`imagen ${idx + 1}`} className="h-24 w-auto max-w-[180px] object-cover" />
                     <button
                       type="button"
-                      onClick={() => removeFile(idx)}
+                      onClick={() => removeImage(idx)}
                       className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
                     >
                       <X className="h-3 w-3" />
@@ -348,10 +299,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
                   </div>
                 ))}
                 <div className="flex items-center">
-                  <span className="text-xs text-slate-400">
-                    {pendingFiles.length} archivo{pendingFiles.length !== 1 ? "s" : ""}
-                    {isUploading ? " · subiendo…" : ""}
-                  </span>
+                  <span className="text-xs text-slate-400">{pendingImages.length} imagen{pendingImages.length !== 1 ? "es" : ""}</span>
                 </div>
               </div>
             )}
