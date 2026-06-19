@@ -73,6 +73,9 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
           <div className="[&_button]:border-slate-700 [&_button]:bg-slate-900 [&_button]:text-slate-300 [&_button:hover]:bg-slate-800 [&_button:hover]:text-white [&_button:hover]:border-slate-600">
             <NotificationBell />
           </div>
+          <Link href="/propuestas" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
+            Propuestas
+          </Link>
           <Link href="/tareas" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
             Notas internas
           </Link>
@@ -109,6 +112,9 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
                   <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/admin/notas">
                     🔒 Notas internas
                   </Link>
+                  <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/admin/propuestas">
+                    💡 Propuestas
+                  </Link>
                 </div>
               ) : null}
             </div>
@@ -131,6 +137,9 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
               <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-700 bg-slate-900 p-1 shadow-xl">
                 <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/perfil">
                   Perfil
+                </Link>
+                <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white" href="/propuestas">
+                  Propuestas
                 </Link>
                 <Link className="block rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800 hover:text-white md:hidden" href="/tareas">
                   Notas internas

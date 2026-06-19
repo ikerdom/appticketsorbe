@@ -6,6 +6,7 @@ import { Trash2, Lightbulb, Clock, CheckCircle2, XCircle, Eye } from "lucide-rea
 import { formatDateTimeEs } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 
 type PropuestaEstado = "PENDIENTE" | "REVISADA" | "ACEPTADA" | "DESCARTADA";
 
@@ -43,6 +44,7 @@ function PropuestaAdminCard({
   const [, startTransition] = useTransition();
   const [editNota, setEditNota] = useState(false);
   const [nota, setNota] = useState(propuesta.notaAdmin ?? "");
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
   const cfg = ESTADO_CONFIG[propuesta.estado];
 
   function changeEstado(estado: PropuestaEstado) {
@@ -74,8 +76,8 @@ function PropuestaAdminCard({
     });
   }
 
-  function deletePropuesta() {
-    if (!confirm("¿Eliminar esta propuesta?")) return;
+  function handleDeleteConfirmed() {
+    setDeleteConfirm(false);
     startTransition(async () => {
       const res = await fetch(`/api/propuestas/${propuesta.id}`, { method: "DELETE" });
       if (!res.ok) { toast.error("No se pudo eliminar"); return; }
@@ -102,7 +104,7 @@ function PropuestaAdminCard({
         </div>
         <button
           type="button"
-          onClick={deletePropuesta}
+          onClick={() => setDeleteConfirm(true)}
           className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -168,6 +170,18 @@ function PropuestaAdminCard({
           );
         })}
       </div>
+
+      <Dialog
+        open={deleteConfirm}
+        onClose={() => setDeleteConfirm(false)}
+        title="Eliminar propuesta"
+        description={`¿Seguro que quieres eliminar "${propuesta.titulo}"? Esta acción no se puede deshacer.`}
+      >
+        <DialogActions>
+          <Button variant="outline" onClick={() => setDeleteConfirm(false)}>Cancelar</Button>
+          <Button onClick={handleDeleteConfirmed} className="bg-red-600 hover:bg-red-700 text-white">Eliminar</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

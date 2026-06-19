@@ -158,6 +158,27 @@ En la vista móvil (< md), el kanban usa tabs (ABIERTO / EN CURSO / RESUELTO). E
 
 ---
 
+## B007 — `confirm()` nativo en eliminar propuesta (admin)
+
+**Estado:** 🟢 RESUELTO — 2026-06-19
+
+**Severidad:** BAJA (UX)
+
+**Descripción:**
+En la vista admin de propuestas, al pulsar el icono de papelera aparece el diálogo nativo `confirm()` del navegador, inconsistente con el resto de la app.
+
+**Causa:**
+`components/propuestas/propuestas-admin-list.tsx` función `deletePropuesta()`:
+```typescript
+if (!confirm("¿Eliminar esta propuesta?")) return;
+```
+
+**Fix aplicado:**
+Reemplazado por `Dialog` de `components/ui/dialog.tsx` (mismo patrón que B003 en kanban).
+Estado local `deleteConfirm` controla apertura/cierre. `handleDeleteConfirmed()` ejecuta el DELETE tras confirmar.
+
+---
+
 ## Cómo reportar un bug nuevo
 
 Para añadir un bug a este fichero, usar esta plantilla:

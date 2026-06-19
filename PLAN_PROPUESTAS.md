@@ -7,19 +7,78 @@ Versión: 1.0 · Fecha: 2026-06-19
 
 ## Estado actual
 
-El módulo existe pero está incompleto:
-
 | Qué | Estado |
 |-----|--------|
 | Schema `Propuesta` en BD | ✅ Existe |
 | API GET/POST/PATCH/DELETE | ✅ Existe |
 | Página usuario `/propuestas` | ✅ Existe |
 | Página admin `/admin/propuestas` | ✅ Existe |
-| **Link en navegación** | ❌ No existe — nadie puede encontrarlo |
-| **Link admin en menú** | ❌ No existe |
-| **Categoría de propuesta** | ❌ No existe |
-| **Impacto estimado** | ❌ No existe |
-| **UX mejorada** | ❌ Cards básicas, sin jerarquía visual clara |
+| Link "Propuestas" en navegación | ✅ Implementado 2026-06-19 |
+| Link admin en menú (💡 Propuestas) | ✅ Implementado 2026-06-19 |
+| Delete con Dialog (sin confirm nativo) | ✅ Implementado 2026-06-19 |
+| **Categoría de propuesta** | ❌ No existe (M3) |
+| **Impacto estimado** | ❌ No existe (M4) |
+| **UX mejorada** | ❌ Cards básicas (M5) |
+
+---
+
+## Bugs conocidos
+
+### B007 — `confirm()` nativo en eliminar propuesta
+
+**Estado:** 🟢 RESUELTO — 2026-06-19 (Dialog propio, mismo patrón que B003)  
+**Severidad:** BAJA (UX)  
+**Archivo:** `components/propuestas/propuestas-admin-list.tsx` línea 78
+
+```typescript
+// ACTUAL — nativo, inconsistente
+function deletePropuesta() {
+  if (!confirm("¿Eliminar esta propuesta?")) return;
+  startTransition(async () => { ... });
+}
+```
+
+**Fix:** Mismo patrón que B003 (resuelto en kanban). Usar el `Dialog` de `components/ui/dialog.tsx`.
+
+```typescript
+// 1. Añadir estado en PropuestaAdminCard:
+const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+// 2. Reemplazar deletePropuesta:
+function handleDeleteConfirmed() {
+  setDeleteConfirm(false);
+  startTransition(async () => {
+    const res = await fetch(`/api/propuestas/${propuesta.id}`, { method: "DELETE" });
+    if (!res.ok) { toast.error("No se pudo eliminar"); return; }
+    onDelete(propuesta.id);
+    toast.success("Propuesta eliminada");
+  });
+}
+
+// 3. El botón de papelera abre Dialog en vez de confirm():
+<button type="button" onClick={() => setDeleteConfirm(true)} ...>
+  <Trash2 className="h-3.5 w-3.5" />
+</button>
+
+// 4. Dialog al final del JSX de PropuestaAdminCard:
+<Dialog
+  open={deleteConfirm}
+  onClose={() => setDeleteConfirm(false)}
+  title="Eliminar propuesta"
+  description={`¿Seguro que quieres eliminar "${propuesta.titulo}"? Esta acción no se puede deshacer.`}
+>
+  <DialogActions>
+    <Button variant="outline" onClick={() => setDeleteConfirm(false)}>Cancelar</Button>
+    <Button onClick={handleDeleteConfirmed} className="bg-red-600 hover:bg-red-700 text-white">Eliminar</Button>
+  </DialogActions>
+</Dialog>
+```
+
+Imports a añadir:
+```typescript
+import { Dialog, DialogActions } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+```
 
 ---
 
@@ -27,13 +86,14 @@ El módulo existe pero está incompleto:
 
 | ID | Cambio | Esfuerzo | Prioridad |
 |----|--------|----------|-----------|
-| [M1](#m1--link-propuestas-en-navegación) | Link "Propuestas" en header | Mínimo (5 min) | 🔴 CRÍTICO |
-| [M2](#m2--link-admin-en-dropdown) | Link admin → propuestas pendientes | Mínimo (5 min) | 🔴 CRÍTICO |
-| [M3](#m3--categoría-de-propuesta) | Campo categoría (schema + UI) | Medio (1h) | 🟠 ALTA |
-| [M4](#m4--campo-impacto) | Campo impacto estimado | Medio (30 min) | 🟡 MEDIA |
-| [M5](#m5--ux-cards-mejoradas) | Cards más visuales y limpias | Medio (1h) | 🟡 MEDIA |
+| [B007](#b007--confirm-nativo-en-eliminar-propuesta) | Fix confirm() → Dialog en delete | ~~15 min~~ | ✅ HECHO 2026-06-19 |
+| [M1](#m1--link-propuestas-en-navegación) | Link "Propuestas" en header | ~~5 min~~ | ✅ HECHO 2026-06-19 |
+| [M2](#m2--link-admin-en-dropdown) | Link admin → propuestas pendientes | ~~5 min~~ | ✅ HECHO 2026-06-19 |
+| [M3](#m3--categoría-de-propuesta) | Campo categoría (schema + UI) | 1h | 🟠 PENDIENTE |
+| [M4](#m4--campo-impacto) | Campo impacto estimado | 30 min | 🟡 PENDIENTE |
+| [M5](#m5--ux-cards-mejoradas) | Cards más visuales y limpias | 1h | 🟡 PENDIENTE |
 
-**Orden recomendado:** M1 → M2 → M3 → M4 → M5
+**Siguiente:** M3 → M4 → M5
 
 ---
 
@@ -406,11 +466,15 @@ Reescribir las tarjetas para que sean más claras visualmente:
    → commit + push → Vercel deploy
    → Ya navegable
 
-2. M3 + M4 — schema + migración + constantes + form + API + cards
+2. B007 — fix confirm() en delete (propuestas-admin-list.tsx)
+   → solo components, sin BD
+   → commit + push
+
+3. M3 + M4 — schema + migración + constantes + form + API + cards
    → npm run build primero
    → commit + push
 
-3. M5 — UX polish de cards
+4. M5 — UX polish de cards
    → commit + push
 ```
 
