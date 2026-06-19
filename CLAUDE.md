@@ -15,6 +15,7 @@ Antes de tocar código, lee siempre estos documentos en este orden:
 | [SPEC_FUNCIONAL.md](./SPEC_FUNCIONAL.md) | Cómo funciona todo: flujos, permisos, estados | Cuando no sepas qué debe hacer algo |
 | [BUGS.md](./BUGS.md) | Bugs conocidos con causa raíz y fix | Antes de arreglar cualquier bug |
 | [PLAN_MEJORAS.md](./PLAN_MEJORAS.md) | Mejoras planificadas con código exacto | Cuando vayas a implementar una feature |
+| [PLAN_PROPUESTAS.md](./PLAN_PROPUESTAS.md) | Plan módulo Propuestas de Mejora | Cuando trabajes en el módulo de propuestas |
 | [README.md](./README.md) | Setup inicial, deploy, comandos | Para arrancar el proyecto |
 
 ---
