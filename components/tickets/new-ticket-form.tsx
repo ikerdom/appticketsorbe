@@ -55,16 +55,20 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function addImageFiles(files: File[]) {
+  function addImageFiles(files: File[]): number {
     const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
-    if (!imgs.length) return;
-    const tooLarge = imgs.filter((f) => f.size > 4 * 1024 * 1024);
-    if (tooLarge.length) { toast.error("Alguna imagen supera 4 MB y no se añadirá"); }
-    const valid = imgs.filter((f) => f.size <= 4 * 1024 * 1024);
-    setPendingImages((prev) => [
-      ...prev,
-      ...valid.map((file) => ({ file, preview: URL.createObjectURL(file) }))
-    ]);
+    if (!imgs.length) return 0;
+    // base64 adds ~33% — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
+    const tooLarge = imgs.filter((f) => f.size > 3 * 1024 * 1024);
+    if (tooLarge.length) { toast.error(`${tooLarge.length === 1 ? "Una imagen supera" : `${tooLarge.length} imágenes superan`} el límite de 3 MB`); }
+    const valid = imgs.filter((f) => f.size <= 3 * 1024 * 1024);
+    if (valid.length) {
+      setPendingImages((prev) => [
+        ...prev,
+        ...valid.map((file) => ({ file, preview: URL.createObjectURL(file) }))
+      ]);
+    }
+    return valid.length;
   }
 
   function handlePaste(e: React.ClipboardEvent) {
@@ -74,8 +78,8 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
       .filter(Boolean) as File[];
     if (!imgs.length) return;
     e.preventDefault();
-    addImageFiles(imgs);
-    toast.success(imgs.length === 1 ? "Imagen añadida" : `${imgs.length} imágenes añadidas`);
+    const added = addImageFiles(imgs);
+    if (added > 0) toast.success(added === 1 ? "Imagen añadida" : `${added} imágenes añadidas`);
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {

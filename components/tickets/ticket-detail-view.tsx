@@ -135,8 +135,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     });
   }
 
-  async function uploadImageFile(file: File) {
-    return new Promise<void>((resolve) => {
+  // base64 adds ~33% overhead — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
+  const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
+
+  async function uploadImageFile(file: File): Promise<boolean> {
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error(`Imagen demasiado grande (máx 3 MB). Recorta o comprime antes de pegar.`);
+      return false;
+    }
+    return new Promise<boolean>((resolve) => {
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const dataUrl = ev.target?.result as string;
@@ -151,14 +158,16 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           if (res.ok) {
             const { adjuntos: [adj] } = await res.json();
             setAdjuntos((prev) => [...prev, adj]);
+            resolve(true);
           } else {
             const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
             toast.error(body.error ?? "Error al subir imagen");
+            resolve(false);
           }
         } catch {
           toast.error("Error al subir imagen");
+          resolve(false);
         }
-        resolve();
       };
       reader.readAsDataURL(file);
     });
@@ -172,18 +181,20 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     if (!imageFiles.length) return;
     e.preventDefault();
     setUploadingImage(true);
-    for (const file of imageFiles) await uploadImageFile(file);
+    let ok = 0;
+    for (const file of imageFiles) { if (await uploadImageFile(file)) ok++; }
     setUploadingImage(false);
-    toast.success(imageFiles.length === 1 ? "Imagen adjuntada" : `${imageFiles.length} imágenes adjuntadas`);
+    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
   }
 
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
     if (!files.length) return;
     setUploadingImage(true);
-    for (const file of files) await uploadImageFile(file);
+    let ok = 0;
+    for (const file of files) { if (await uploadImageFile(file)) ok++; }
     setUploadingImage(false);
-    toast.success(files.length === 1 ? "Imagen adjuntada" : `${files.length} imágenes adjuntadas`);
+    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
     e.target.value = "";
   }
 
@@ -193,9 +204,10 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
     if (!files.length) return;
     setUploadingImage(true);
-    for (const file of files) await uploadImageFile(file);
+    let ok = 0;
+    for (const file of files) { if (await uploadImageFile(file)) ok++; }
     setUploadingImage(false);
-    toast.success(files.length === 1 ? "Imagen adjuntada" : `${files.length} imágenes adjuntadas`);
+    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
   }
 
   async function deleteTicket() {

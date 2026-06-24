@@ -6,7 +6,7 @@ import { puedeVerTicket } from "@/lib/permisos";
 import { requireCurrentUser } from "@/lib/data";
 import { logTicketAction } from "@/lib/audit";
 
-const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024; // 4MB
+const MAX_FILE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB — base64 adds 33%, keep body under Vercel's 4.5MB limit
 const IS_VERCEL = Boolean(process.env.VERCEL);
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
       const buffer = Buffer.from(base64, "base64");
       if (buffer.byteLength > MAX_FILE_SIZE_BYTES) {
-        return NextResponse.json({ error: "Imagen demasiado grande (máx 4MB)." }, { status: 400 });
+        return NextResponse.json({ error: "Imagen demasiado grande (máx 3 MB). Recorta o comprime antes de pegar." }, { status: 400 });
       }
 
       const dataUrl = `data:${tipo};base64,${base64}`;
