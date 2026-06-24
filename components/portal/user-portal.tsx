@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  AlertCircle, CheckCircle2, ChevronDown, ChevronRight, ChevronUp,
-  Clock, MessageSquare, Plus
+  AlertCircle, AlertTriangle, ArrowRight, CheckCircle2,
+  ChevronDown, ChevronRight, ChevronUp, Clock, MessageSquare, Plus
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
 
@@ -53,13 +53,13 @@ interface UserPortalProps {
   autorEmail: string;
 }
 
-const ESTADO_CONFIG: Record<TicketEstado, {
+const COL_CONFIG: Record<TicketEstado, {
   label: string;
   icon: React.ReactNode;
   header: string;
   dot: string;
   badge: string;
-  dropzone: string;
+  bg: string;
 }> = {
   ABIERTO: {
     label: "Abiertos",
@@ -67,7 +67,7 @@ const ESTADO_CONFIG: Record<TicketEstado, {
     header: "bg-red-50 border-red-100 text-red-800",
     dot: "bg-red-500",
     badge: "bg-red-100 text-red-700 ring-1 ring-red-200",
-    dropzone: "bg-red-50/30"
+    bg: "bg-red-50/30"
   },
   EN_CURSO: {
     label: "En curso",
@@ -75,7 +75,7 @@ const ESTADO_CONFIG: Record<TicketEstado, {
     header: "bg-amber-50 border-amber-100 text-amber-800",
     dot: "bg-amber-500",
     badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
-    dropzone: "bg-amber-50/30"
+    bg: "bg-amber-50/30"
   },
   RESUELTO: {
     label: "Resueltos",
@@ -83,7 +83,7 @@ const ESTADO_CONFIG: Record<TicketEstado, {
     header: "bg-emerald-50 border-emerald-100 text-emerald-800",
     dot: "bg-emerald-500",
     badge: "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200",
-    dropzone: "bg-emerald-50/30"
+    bg: "bg-emerald-50/30"
   }
 };
 
@@ -98,70 +98,133 @@ const PRIORIDAD_LABEL: Record<Prioridad, string> = {
   CRITICA: "Crítica", ALTA: "Alta", MEDIA: "Media", BAJA: "Baja"
 };
 
-export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPortalProps) {
+export function UserPortal({ tickets }: UserPortalProps) {
   const [showResueltos, setShowResueltos] = useState(false);
 
   const abiertos  = tickets.filter(t => t.estado === "ABIERTO");
   const enCurso   = tickets.filter(t => t.estado === "EN_CURSO");
   const resueltos = tickets.filter(t => t.estado === "RESUELTO");
   const sinLeer   = tickets.filter(t => t.unread).length;
-  const tareasAct = tareas.filter(t => t.estado !== "HECHO").length;
   const activos   = abiertos.length + enCurso.length;
 
-  return (
-    <div className="space-y-4">
+  const criticosAbiertos = abiertos.filter(t => t.prioridad === "CRITICA");
 
-      {/* Cabecera */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-xl border bg-white px-4 py-2.5 shadow-sm">
-          <span className="text-sm font-bold text-slate-800">{activos}</span>
-          <span className="text-xs text-slate-400">activos</span>
-          {sinLeer > 0 && (
-            <span className="ml-1 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{sinLeer}</span>
-          )}
+  return (
+    <div className="space-y-5">
+
+      {/* ── Stats ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="relative overflow-hidden rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-indigo-100">
+            <AlertCircle className="h-4 w-4 text-indigo-600" />
+          </div>
+          <p className="text-3xl font-black tracking-tight text-slate-900">{activos}</p>
+          <p className="text-xs text-slate-400 mt-0.5">
+            activos
+            {sinLeer > 0 && <span className="ml-1.5 rounded-full bg-indigo-500 px-1.5 py-0.5 text-[10px] font-bold text-white">{sinLeer}</span>}
+          </p>
+          <div className="absolute -right-3 -bottom-3 h-14 w-14 rounded-full bg-indigo-50" />
         </div>
-        <div className="flex items-center gap-1.5 rounded-xl border bg-red-50 px-3 py-2 text-sm">
-          <span className="font-bold text-red-600">{abiertos.length}</span>
-          <span className="text-xs text-red-400">abiertos</span>
+
+        <div className={`relative overflow-hidden rounded-2xl border p-4 shadow-sm ${abiertos.length > 0 ? "bg-red-50 border-red-100" : "bg-white"}`}>
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-red-100">
+            <AlertCircle className="h-4 w-4 text-red-500" />
+          </div>
+          <p className={`text-3xl font-black tracking-tight ${abiertos.length > 0 ? "text-red-600" : "text-slate-900"}`}>{abiertos.length}</p>
+          <p className="text-xs text-slate-400 mt-0.5">abiertos</p>
+          <div className="absolute -right-3 -bottom-3 h-14 w-14 rounded-full bg-red-100 opacity-40" />
         </div>
-        <div className="flex items-center gap-1.5 rounded-xl border bg-amber-50 px-3 py-2 text-sm">
-          <span className="font-bold text-amber-600">{enCurso.length}</span>
-          <span className="text-xs text-amber-400">en curso</span>
+
+        <div className="relative overflow-hidden rounded-2xl border bg-amber-50 border-amber-100 p-4 shadow-sm">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-amber-100">
+            <Clock className="h-4 w-4 text-amber-600" />
+          </div>
+          <p className="text-3xl font-black tracking-tight text-amber-700">{enCurso.length}</p>
+          <p className="text-xs text-amber-400 mt-0.5">en curso</p>
+          <div className="absolute -right-3 -bottom-3 h-14 w-14 rounded-full bg-amber-100 opacity-60" />
         </div>
-        <div className="flex-1" />
+
+        <div className="relative overflow-hidden rounded-2xl border bg-emerald-50 border-emerald-100 p-4 shadow-sm">
+          <div className="mb-2 flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-100">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          </div>
+          <p className="text-3xl font-black tracking-tight text-emerald-700">{resueltos.length}</p>
+          <p className="text-xs text-emerald-400 mt-0.5">resueltos</p>
+          <div className="absolute -right-3 -bottom-3 h-14 w-14 rounded-full bg-emerald-100 opacity-60" />
+        </div>
+      </div>
+
+      {/* ── Alerta críticos ─────────────────────────────────────── */}
+      {criticosAbiertos.length > 0 && (
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-red-600 animate-pulse shrink-0" />
+            <span className="text-sm font-bold text-red-800">
+              {criticosAbiertos.length} incidencia{criticosAbiertos.length > 1 ? "s" : ""} crítica{criticosAbiertos.length > 1 ? "s" : ""} pendiente{criticosAbiertos.length > 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="space-y-1.5">
+            {criticosAbiertos.map(t => (
+              <Link
+                key={t.id}
+                href={`/tickets/${t.id}`}
+                className="flex items-center gap-3 rounded-xl bg-white/70 px-3 py-2 text-sm hover:bg-white transition group"
+              >
+                <span className="flex-1 truncate font-medium text-red-900">{t.titulo}</span>
+                <ArrowRight className="h-3.5 w-3.5 text-red-400 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Acción + cabecera incidencias ───────────────────────── */}
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-slate-800">
+          Mis incidencias
+          {activos > 0 && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{activos} activas</span>}
+        </h2>
         <Link
           href="/tickets/nuevo"
           className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
         >
           <Plus className="h-4 w-4" />
-          Nuevo ticket
+          Nueva
         </Link>
       </div>
 
-      {/* Kanban 3 columnas — desktop */}
+      {/* ── Columnas de tickets ──────────────────────────────────── */}
       {tickets.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
-          <p className="mb-1 text-sm font-medium text-slate-500">Sin tickets activos</p>
-          <p className="text-xs text-slate-400">Todo al día 👌</p>
+        <div className="rounded-2xl border border-dashed bg-white p-14 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100">
+            <CheckCircle2 className="h-7 w-7 text-emerald-500" />
+          </div>
+          <p className="mb-1 text-base font-semibold text-slate-700">Todo al día</p>
+          <p className="mb-5 text-sm text-slate-400">Sin incidencias pendientes. ¡Buen trabajo!</p>
+          <Link
+            href="/tickets/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+          >
+            <Plus className="h-4 w-4" /> Crear incidencia
+          </Link>
         </div>
       ) : (
         <>
-          {/* Desktop: 3 cols (resueltos ocultos por defecto) */}
+          {/* Desktop: 3 cols */}
           <div className="hidden gap-3 md:grid md:grid-cols-3">
-            {(["ABIERTO", "EN_CURSO"] as TicketEstado[]).map(estado => (
-              <KanbanCol key={estado} estado={estado} tickets={estado === "ABIERTO" ? abiertos : enCurso} />
-            ))}
-            {/* Resueltos colapsables en desktop */}
+            <KanbanCol estado="ABIERTO"  tickets={abiertos} />
+            <KanbanCol estado="EN_CURSO" tickets={enCurso} />
+            {/* Resueltos colapsables */}
             <div className="space-y-2">
-              <KanbanColHeader estado="RESUELTO" count={resueltos.length} />
-              {resueltos.length > 0 && (
+              <ColHeader estado="RESUELTO" count={resueltos.length} />
+              {resueltos.length > 0 ? (
                 <>
                   <button
                     type="button"
                     onClick={() => setShowResueltos(v => !v)}
-                    className="flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50"
+                    className="flex w-full items-center justify-between rounded-xl border bg-white px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition"
                   >
-                    <span>{showResueltos ? "Ocultar" : "Ver resueltos"}</span>
+                    <span>{showResueltos ? "Ocultar resueltos" : `Ver ${resueltos.length} resueltos`}</span>
                     {showResueltos ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                   </button>
                   {showResueltos && (
@@ -170,29 +233,30 @@ export function UserPortal({ tickets, tareas, currentUserId, usuarios }: UserPor
                     </div>
                   )}
                 </>
-              )}
-              {resueltos.length === 0 && (
-                <div className="rounded-xl border border-dashed p-5 text-center text-xs text-slate-400 bg-emerald-50/30">Sin resueltos</div>
+              ) : (
+                <div className="rounded-xl border border-dashed p-6 text-center text-xs text-slate-400 bg-emerald-50/30">Sin resueltos</div>
               )}
             </div>
           </div>
 
-          {/* Mobile: lista por estado */}
+          {/* Mobile: lista */}
           <div className="space-y-3 md:hidden">
-            {(["ABIERTO", "EN_CURSO", "RESUELTO"] as TicketEstado[]).map(estado => {
-              const list = estado === "ABIERTO" ? abiertos : estado === "EN_CURSO" ? enCurso : resueltos;
-              return <KanbanCol key={estado} estado={estado} tickets={list} />;
-            })}
+            {(["ABIERTO", "EN_CURSO", "RESUELTO"] as TicketEstado[]).map(estado => (
+              <KanbanCol
+                key={estado}
+                estado={estado}
+                tickets={estado === "ABIERTO" ? abiertos : estado === "EN_CURSO" ? enCurso : resueltos}
+              />
+            ))}
           </div>
         </>
       )}
-
     </div>
   );
 }
 
-function KanbanColHeader({ estado, count }: { estado: TicketEstado; count: number }) {
-  const cfg = ESTADO_CONFIG[estado];
+function ColHeader({ estado, count }: { estado: TicketEstado; count: number }) {
+  const cfg = COL_CONFIG[estado];
   return (
     <div className={`rounded-xl border px-4 py-2.5 ${cfg.header}`}>
       <div className="flex items-center gap-2.5">
@@ -205,13 +269,13 @@ function KanbanColHeader({ estado, count }: { estado: TicketEstado; count: numbe
 }
 
 function KanbanCol({ estado, tickets }: { estado: TicketEstado; tickets: PortalTicket[] }) {
-  const cfg = ESTADO_CONFIG[estado];
+  const cfg = COL_CONFIG[estado];
   return (
     <div className="space-y-2">
-      <KanbanColHeader estado={estado} count={tickets.length} />
-      <div className={`min-h-[160px] space-y-1.5 rounded-xl p-2 ${cfg.dropzone}`}>
+      <ColHeader estado={estado} count={tickets.length} />
+      <div className={`min-h-[120px] space-y-1.5 rounded-xl p-2 ${cfg.bg}`}>
         {tickets.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-current/20 p-5 text-center text-xs text-slate-400 opacity-60">
+          <div className="rounded-xl border border-dashed p-6 text-center text-xs text-slate-400 opacity-60">
             Sin tickets
           </div>
         ) : (
@@ -230,24 +294,25 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
     >
       <div className="mb-1.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
-          {ticket.unread && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />}
+          {ticket.unread && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" title="Sin leer" />}
           <span className={`h-2 w-2 shrink-0 rounded-full ${PRIORIDAD_DOT[ticket.prioridad]}`} />
-          <span className="text-[10px] font-semibold text-slate-400">{PRIORIDAD_LABEL[ticket.prioridad]}</span>
+          <span className="text-[10px] font-semibold text-slate-400">{PRIORIDAD_LABEL[ticket.prioridad] ?? ticket.prioridad}</span>
         </div>
         <div className="flex items-center gap-1.5">
           {ticket._count.comentarios > 0 && (
             <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
-              <MessageSquare className="h-3 w-3" />{ticket._count.comentarios}
+              <MessageSquare className="h-3 w-3" />
+              {ticket._count.comentarios}
             </span>
           )}
-          <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-slate-500 transition" />
+          <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-400 transition" />
         </div>
       </div>
       <p className={`line-clamp-2 text-sm font-semibold leading-snug ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
         {ticket.titulo}
       </p>
       <p className="mt-1 text-[10px] text-slate-400">
-        {ticket.creador.nombre ?? ticket.creador.name ?? ticket.creador.email} · {formatRelativeEs(ticket.updatedAt)}
+        {formatRelativeEs(ticket.updatedAt)}
       </p>
     </Link>
   );

@@ -91,7 +91,7 @@ export default async function DashboardPage() {
     return (
       <div className="space-y-5">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Panel de tickets</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Incidencias</h1>
           <p className="text-sm text-slate-500">Vista de administrador · todas las empresas</p>
         </div>
         <AdminEmpresasPanel
