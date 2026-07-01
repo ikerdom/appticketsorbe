@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { ImagePlus, Lock, Paperclip, UserRound, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, ImagePlus, Info, Lock, Paperclip, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [descError, setDescError] = useState<string | null>(null);
   const [categoriaInput, setCategoriaInput] = useState("");
 
   // Image attachments — held in memory until ticket is created
@@ -136,6 +137,10 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const selectedPrioridad = useWatch({ control: form.control, name: "prioridad" });
   const descripcion = useWatch({ control: form.control, name: "descripcion" }) ?? "";
 
+  const MIN_PALABRAS = 30;
+  const palabras = useMemo(() => descripcion.trim().split(/\s+/).filter(Boolean).length, [descripcion]);
+  const descripcionOk = palabras >= MIN_PALABRAS || pendingImages.length > 0;
+
   const allCategorias = useMemo(() => Array.from(new Set([...BASE_CATEGORIAS, ...categoriasCustom])), [categoriasCustom]);
 
   function toggleEmpresa(empresaId: string) {
@@ -158,6 +163,19 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   }
 
   const onSubmit = form.handleSubmit((values) => {
+    const wordCount = values.descripcion.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount < MIN_PALABRAS && pendingImages.length === 0) {
+      setDescError(
+        `Necesitamos más detalle para poder ayudarte (${wordCount}/${MIN_PALABRAS} palabras). ` +
+        "Explica qué falla, cómo debería funcionar y qué ves exactamente. " +
+        "También puedes adjuntar una captura de pantalla con Ctrl+V."
+      );
+      document.getElementById("descripcion")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById("descripcion")?.focus();
+      return;
+    }
+    setDescError(null);
+
     startTransition(async () => {
       setError(null);
 
@@ -252,6 +270,24 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
 
           <div className="space-y-2">
             <Label htmlFor="descripcion">Descripción</Label>
+
+            {/* Panel de normas */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5">
+              <div className="mb-2 flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5 shrink-0 text-amber-600" />
+                <span className="text-xs font-semibold text-amber-800">Para que podamos ayudarte, incluye:</span>
+              </div>
+              <ul className="space-y-1 text-xs text-amber-700">
+                <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">🔴</span><span><strong>Qué falla</strong> — qué no funciona y cuándo ocurre</span></li>
+                <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">✅</span><span><strong>Cómo debe funcionar</strong> — el comportamiento esperado</span></li>
+                <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">❌</span><span><strong>Qué ves exactamente</strong> — mensaje de error, pantalla o síntoma</span></li>
+                <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">📷</span><span><strong>Captura de pantalla completa</strong> si es posible (Ctrl+V para pegar)</span></li>
+              </ul>
+              <p className="mt-2.5 border-t border-amber-200 pt-2 text-[11px] text-amber-600">
+                Las incidencias sin información suficiente no podrán atenderse hasta que se complete la descripción.
+              </p>
+            </div>
+
             <div
               className={`relative rounded-xl transition ${dragOver ? "ring-2 ring-indigo-400 ring-offset-1" : ""}`}
               onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
@@ -262,15 +298,40 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
                 id="descripcion"
                 rows={8}
                 {...form.register("descripcion")}
-                className={`min-h-[160px] ${dragOver ? "border-indigo-400" : ""}`}
-                placeholder={dragOver ? "Suelta las imágenes aquí…" : undefined}
+                className={`min-h-[160px] ${dragOver ? "border-indigo-400" : ""} ${descError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
+                placeholder={dragOver
+                  ? "Suelta las imágenes aquí…"
+                  : "Describe el problema con detalle:\n\n🔴 Qué falla: ...\n✅ Cómo debería funcionar: ...\n❌ Qué veo exactamente: ..."}
                 onPaste={handlePaste}
+                onChange={() => { if (descError) setDescError(null); }}
               />
             </div>
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>{form.formState.errors.descripcion?.message}</span>
-              <span>{descripcion.length} caracteres</span>
+
+            {/* Indicador de calidad en tiempo real */}
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-red-600">{form.formState.errors.descripcion?.message}</span>
+              {descripcionOk ? (
+                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  {pendingImages.length > 0 && palabras < MIN_PALABRAS
+                    ? "Captura adjunta — listo"
+                    : `${palabras} palabras — suficiente`}
+                </span>
+              ) : (
+                <span className={`flex items-center gap-1 font-medium ${palabras > 0 ? "text-amber-600" : "text-slate-400"}`}>
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  {palabras}/{MIN_PALABRAS} palabras mínimo
+                </span>
+              )}
             </div>
+
+            {/* Error de calidad (al intentar enviar) */}
+            {descError && (
+              <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <span>{descError}</span>
+              </div>
+            )}
 
             {/* Image picker */}
             <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
