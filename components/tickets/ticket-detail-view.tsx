@@ -52,6 +52,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const conversacionRef = useRef<HTMLDivElement>(null);
 
   const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
+  const [lightbox, setLightbox] = useState<{ url: string; nombre: string; idx: number } | null>(null);
+  const notas_adjuntos_imgs = adjuntos.filter(a => a.tipo.startsWith("image/"));
   const [notas, setNotas] = useState(ticket.notas);
   const [nuevaNota, setNuevaNota] = useState("");
   const [descExpanded, setDescExpanded] = useState(true);
@@ -67,6 +69,24 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    if (!lightbox) return;
+    const imgs = adjuntos.filter(a => a.tipo.startsWith("image/"));
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setLightbox(null); return; }
+      if (e.key === "ArrowRight") {
+        const next = (lightbox.idx + 1) % imgs.length;
+        setLightbox({ url: imgs[next].url, nombre: imgs[next].nombre, idx: next });
+      }
+      if (e.key === "ArrowLeft") {
+        const prev = (lightbox.idx - 1 + imgs.length) % imgs.length;
+        setLightbox({ url: imgs[prev].url, nombre: imgs[prev].nombre, idx: prev });
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [lightbox, adjuntos]);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -502,28 +522,34 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               </div>
 
               {/* Image gallery */}
-              {adjuntos.filter((a) => a.tipo.startsWith("image/")).length > 0 && (
-                <div className="flex flex-wrap gap-2 border-t pt-3">
-                  {adjuntos.filter((a) => a.tipo.startsWith("image/")).map((adj) => (
-                    <a
-                      key={adj.id}
-                      href={adj.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group relative block overflow-hidden rounded-lg border shadow-sm hover:shadow-md transition"
-                      title={adj.nombre}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={adj.url}
-                        alt={adj.nombre}
-                        className="h-28 w-auto max-w-[220px] object-cover transition group-hover:opacity-85"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-black/20 rounded-lg">
-                        <ImagePlus className="h-5 w-5 text-white drop-shadow" />
-                      </div>
-                    </a>
-                  ))}
+              {notas_adjuntos_imgs.length > 0 && (
+                <div className="border-t pt-3 space-y-2">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
+                    {notas_adjuntos_imgs.length} captura{notas_adjuntos_imgs.length > 1 ? "s" : ""} · clic para ampliar
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {notas_adjuntos_imgs.map((adj, idx) => (
+                      <button
+                        key={adj.id}
+                        type="button"
+                        onClick={() => setLightbox({ url: adj.url, nombre: adj.nombre, idx })}
+                        className="group relative block overflow-hidden rounded-xl border-2 border-transparent bg-slate-100 shadow-sm hover:border-indigo-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                        title={adj.nombre}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={adj.url}
+                          alt={adj.nombre}
+                          className="h-32 w-auto max-w-[240px] object-cover"
+                        />
+                        {/* UN solo overlay — antes había dos superpuestos → imagen se veía negra al hover */}
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition rounded-xl bg-indigo-900/40">
+                          <ImagePlus className="h-5 w-5 text-white drop-shadow" />
+                          <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700">Ampliar</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -831,6 +857,90 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
       </div>
+
+      {/* ── Lightbox ───────────────────────────────────────────── */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4"
+          onClick={() => setLightbox(null)}
+        >
+          {/* Close */}
+          <button
+            type="button"
+            onClick={() => setLightbox(null)}
+            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 transition"
+            aria-label="Cerrar (Esc)"
+          >
+            <X className="h-5 w-5" />
+          </button>
+
+          {/* Prev / Next */}
+          {notas_adjuntos_imgs.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const prev = (lightbox.idx - 1 + notas_adjuntos_imgs.length) % notas_adjuntos_imgs.length;
+                  setLightbox({ url: notas_adjuntos_imgs[prev].url, nombre: notas_adjuntos_imgs[prev].nombre, idx: prev });
+                }}
+                className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
+              >‹</button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const next = (lightbox.idx + 1) % notas_adjuntos_imgs.length;
+                  setLightbox({ url: notas_adjuntos_imgs[next].url, nombre: notas_adjuntos_imgs[next].nombre, idx: next });
+                }}
+                className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
+              >›</button>
+            </>
+          )}
+
+          {/* Imagen */}
+          <div
+            className="flex flex-col items-center gap-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* bg-white: evita que zonas transparentes del PNG aparezcan negras */}
+            <div className="rounded-2xl bg-white shadow-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={lightbox.url}
+                alt={lightbox.nombre}
+                className="block h-auto w-auto max-h-[80vh] max-w-[90vw] rounded-2xl"
+              />
+            </div>
+
+            <div className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-2">
+              <span className="max-w-[220px] truncate text-sm text-white/80">{lightbox.nombre}</span>
+              {notas_adjuntos_imgs.length > 1 && (
+                <span className="shrink-0 text-xs text-white/40">{lightbox.idx + 1} / {notas_adjuntos_imgs.length}</span>
+              )}
+              <button
+                type="button"
+                className="shrink-0 rounded-lg bg-white/20 px-3 py-1 text-xs font-semibold text-white hover:bg-white/30 transition"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Blob download — más fiable que href con data: URL larga
+                  const [meta, b64] = lightbox.url.split(",");
+                  const mime = meta.split(":")[1].split(";")[0];
+                  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+                  const blob = new Blob([bytes], { type: mime });
+                  const a = document.createElement("a");
+                  a.href = URL.createObjectURL(blob);
+                  a.download = lightbox.nombre;
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+              >
+                ↓ Descargar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
