@@ -288,6 +288,9 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
                 <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">❌</span><span><strong>Qué ves exactamente</strong> — mensaje de error, pantalla o síntoma</span></li>
                 <li className="flex items-start gap-1.5"><span className="mt-0.5 shrink-0">📷</span><span><strong>Captura de pantalla completa</strong> si es posible (Ctrl+V para pegar)</span></li>
               </ul>
+              <div className="mt-2.5 rounded-lg bg-white/70 px-3 py-2 text-[11px] leading-relaxed text-amber-700">
+                <strong>¿Cómo hago la captura?</strong> Pulsa la tecla <kbd className="rounded border border-amber-300 bg-amber-100 px-1 font-mono text-[10px]">Impr Pant</kbd> (arriba a la derecha del teclado) y luego pega aquí con <kbd className="rounded border border-amber-300 bg-amber-100 px-1 font-mono text-[10px]">Ctrl+V</kbd>. O usa la herramienta <strong>Recortes</strong> de Windows (<kbd className="rounded border border-amber-300 bg-amber-100 px-1 font-mono text-[10px]">Win+Shift+S</kbd>) y selecciona la pantalla completa.
+              </div>
               <p className="mt-2.5 border-t border-amber-200 pt-2 text-[11px] text-amber-600">
                 Las incidencias sin información suficiente no podrán atenderse hasta que se complete la descripción.
               </p>
