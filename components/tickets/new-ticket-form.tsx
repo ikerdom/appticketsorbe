@@ -9,6 +9,7 @@ import { z } from "zod";
 import { AlertCircle, CheckCircle2, ImagePlus, Info, Lock, Paperclip, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
+import { compressImage } from "@/lib/compress-image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -56,13 +57,15 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function addImageFiles(files: File[]): number {
+  async function addImageFiles(files: File[]): Promise<number> {
     const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
     if (!imgs.length) return 0;
+    // Comprimir en cliente (capturas de pantalla completa pueden superar 3MB en PNG)
+    const compressed = await Promise.all(imgs.map(compressImage));
     // base64 adds ~33% — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
-    const tooLarge = imgs.filter((f) => f.size > 3 * 1024 * 1024);
-    if (tooLarge.length) { toast.error(`${tooLarge.length === 1 ? "Una imagen supera" : `${tooLarge.length} imágenes superan`} el límite de 3 MB`); }
-    const valid = imgs.filter((f) => f.size <= 3 * 1024 * 1024);
+    const tooLarge = compressed.filter((f) => f.size > 3 * 1024 * 1024);
+    if (tooLarge.length) { toast.error(`${tooLarge.length === 1 ? "Una imagen supera" : `${tooLarge.length} imágenes superan`} el límite de 3 MB incluso comprimida`); }
+    const valid = compressed.filter((f) => f.size <= 3 * 1024 * 1024);
     if (valid.length) {
       setPendingImages((prev) => [
         ...prev,
@@ -72,20 +75,21 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
     return valid.length;
   }
 
-  function handlePaste(e: React.ClipboardEvent) {
+  async function handlePaste(e: React.ClipboardEvent) {
     const imgs = Array.from(e.clipboardData.items)
       .filter((i) => i.type.startsWith("image/"))
       .map((i) => i.getAsFile())
       .filter(Boolean) as File[];
     if (!imgs.length) return;
     e.preventDefault();
-    const added = addImageFiles(imgs);
+    const added = await addImageFiles(imgs);
     if (added > 0) toast.success(added === 1 ? "Imagen añadida" : `${added} imágenes añadidas`);
   }
 
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    addImageFiles(Array.from(e.target.files ?? []));
+    const files = Array.from(e.target.files ?? []);
     e.target.value = "";
+    void addImageFiles(files);
   }
 
   function removeImage(idx: number) {
@@ -133,6 +137,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
     }
   });
 
+  const descripcionField = form.register("descripcion");
   const selectedDestinatarios = useWatch({ control: form.control, name: "destinatarios" }) ?? [];
   const selectedPrioridad = useWatch({ control: form.control, name: "prioridad" });
   const descripcion = useWatch({ control: form.control, name: "descripcion" }) ?? "";
@@ -297,13 +302,16 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
               <Textarea
                 id="descripcion"
                 rows={8}
-                {...form.register("descripcion")}
+                {...descripcionField}
                 className={`min-h-[160px] ${dragOver ? "border-indigo-400" : ""} ${descError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
                 placeholder={dragOver
                   ? "Suelta las imágenes aquí…"
                   : "Describe el problema con detalle:\n\n🔴 Qué falla: ...\n✅ Cómo debería funcionar: ...\n❌ Qué veo exactamente: ..."}
                 onPaste={handlePaste}
-                onChange={() => { if (descError) setDescError(null); }}
+                onChange={(e) => {
+                  descripcionField.onChange(e); // react-hook-form primero — sin esto el form no recibe el texto
+                  if (descError) setDescError(null);
+                }}
               />
             </div>
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, ImagePlus, Link2, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
+import { compressImage } from "@/lib/compress-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -158,9 +159,11 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   // base64 adds ~33% overhead — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
   const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-  async function uploadImageFile(file: File): Promise<boolean> {
+  async function uploadImageFile(rawFile: File): Promise<boolean> {
+    // Comprimir en cliente — capturas de pantalla completa superan 3MB en PNG
+    const file = await compressImage(rawFile);
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error(`Imagen demasiado grande (máx 3 MB). Recorta o comprime antes de pegar.`);
+      toast.error(`Imagen demasiado grande (máx 3 MB) incluso comprimida. Recorta la zona relevante.`);
       return false;
     }
     return new Promise<boolean>((resolve) => {

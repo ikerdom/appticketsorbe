@@ -179,6 +179,59 @@ Estado local `deleteConfirm` controla apertura/cierre. `handleDeleteConfirmed()`
 
 ---
 
+## B008 — Formulario de nuevo ticket no se puede enviar (onChange pisado)
+
+**Estado:** 🟢 RESUELTO — 2026-07-02
+
+**Severidad:** CRÍTICA
+
+**Descripción:**
+Desde el cambio del "quality gate" (d42e833), el formulario de nuevo ticket no se podía enviar. El contador de palabras se quedaba en 0/30 aunque escribieras, y al pulsar "Crear ticket" no pasaba nada. Pegar imágenes tampoco desbloqueaba el envío.
+
+**Causa raíz:**
+`components/tickets/new-ticket-form.tsx` — el Textarea de descripción tenía:
+```tsx
+{...form.register("descripcion")}   // register incluye su propio onChange
+onChange={() => { if (descError) setDescError(null); }}  // ← definido DESPUÉS del spread
+```
+En JSX, la prop posterior gana: el `onChange` manual **sobrescribía el de react-hook-form**, así que RHF nunca recibía el texto. `useWatch` devolvía siempre `""`, zod validaba descripción vacía y `handleSubmit` no llegaba a ejecutar el submit.
+
+**Fix aplicado:**
+Extraer el register y encadenar los dos handlers:
+```tsx
+const descripcionField = form.register("descripcion");
+...
+<Textarea
+  {...descripcionField}
+  onChange={(e) => {
+    descripcionField.onChange(e); // RHF primero
+    if (descError) setDescError(null);
+  }}
+/>
+```
+
+**Lección:** nunca poner un `onChange` propio después de un spread de `register()` — siempre encadenar.
+
+---
+
+## B009 — Capturas de pantalla completa rechazadas por el límite de 3 MB
+
+**Estado:** 🟢 RESUELTO — 2026-07-02 (compresión en cliente)
+
+**Severidad:** ALTA
+
+**Descripción:**
+El formulario pide "captura de pantalla completa", pero una captura 2K/4K en PNG supera fácilmente los 3 MB → el propio límite del cliente la rechazaba. Contradicción directa con las normas que mostramos.
+
+**Fix aplicado:**
+Nuevo `lib/compress-image.ts`: si la imagen pesa > 300 KB, se reescala a máx 1920 px y se convierte a JPEG bajando calidad (0.85 → 0.7 → 0.55) hasta quedar bajo 2.5 MB. Fondo blanco para PNG con transparencia. Se usa en:
+- `new-ticket-form.tsx` → `addImageFiles()` (paste, drop, picker)
+- `ticket-detail-view.tsx` → `uploadImageFile()` (comentarios)
+
+Beneficio extra: la BD (base64 en Neon) engorda mucho menos por adjunto.
+
+---
+
 ## Cómo reportar un bug nuevo
 
 Para añadir un bug a este fichero, usar esta plantilla:
