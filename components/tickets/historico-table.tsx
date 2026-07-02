@@ -5,6 +5,7 @@ import { useTransition, useState } from "react";
 import { toast } from "sonner";
 import { BookOpen, RotateCcw, Eye, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { formatDateTimeEs } from "@/lib/dates";
 import { ticketCode } from "@/lib/ticket-utils";
 
@@ -115,9 +116,9 @@ function HistoricoRow({ ticket, onReopen }: { ticket: HistoricoItem; onReopen: (
 export function HistoricoTable({ items }: { items: HistoricoItem[] }) {
   const [, startTransition] = useTransition();
   const router = useRouter();
+  const [reopenId, setReopenId] = useState<string | null>(null);
 
   function reopen(ticketId: string) {
-    if (!confirm("¿Reabrir este ticket y pasarlo a En curso?")) return;
     startTransition(async () => {
       const response = await fetch(`/api/tickets/${ticketId}/estado`, {
         method: "PATCH",
@@ -172,11 +173,32 @@ export function HistoricoTable({ items }: { items: HistoricoItem[] }) {
           </thead>
           <tbody>
             {items.map((ticket) => (
-              <HistoricoRow key={ticket.id} ticket={ticket} onReopen={reopen} />
+              <HistoricoRow key={ticket.id} ticket={ticket} onReopen={setReopenId} />
             ))}
           </tbody>
         </table>
       </div>
+
+      <Dialog
+        open={reopenId !== null}
+        onClose={() => setReopenId(null)}
+        title="Reabrir ticket"
+        description="El ticket volverá al kanban en estado En curso. ¿Continuar?"
+      >
+        <DialogActions>
+          <Button variant="outline" onClick={() => setReopenId(null)}>Cancelar</Button>
+          <Button
+            className="bg-indigo-600 hover:bg-indigo-700 text-white"
+            onClick={() => {
+              const id = reopenId;
+              setReopenId(null);
+              if (id) reopen(id);
+            }}
+          >
+            Reabrir
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
 import { formatDateTimeEs } from "@/lib/dates";
 import type { TicketDetailData } from "@/types/ticket";
@@ -233,8 +234,15 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
   }
 
+  // Dialog genérico de confirmación — sustituye a window.confirm (B003)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    action: () => void | Promise<void>;
+  } | null>(null);
+
   async function deleteTicket() {
-    if (!confirm("¿Eliminar este ticket permanentemente? Esta acción no se puede deshacer.")) return;
     const res = await fetch(`/api/tickets/${ticket.id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Ticket eliminado");
@@ -753,17 +761,24 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => {
-                      if (!confirm("¿Seguro que quieres archivar este ticket?")) return;
-                      void performAction("archive");
-                    }}
+                    onClick={() => setConfirmDialog({
+                      title: "Archivar ticket",
+                      description: "El ticket pasará al histórico y se cerrará definitivamente. ¿Continuar?",
+                      confirmLabel: "Archivar",
+                      action: () => void performAction("archive")
+                    })}
                   >
                     Archivar / Cerrar definitivamente
                   </Button>
                   <Button
                     variant="destructive"
                     className="w-full"
-                    onClick={() => void deleteTicket()}
+                    onClick={() => setConfirmDialog({
+                      title: "Eliminar ticket",
+                      description: `¿Eliminar permanentemente el ticket #${String(ticket.numero).padStart(4, "0")}? Esta acción no se puede deshacer.`,
+                      confirmLabel: "Eliminar",
+                      action: deleteTicket
+                    })}
                   >
                     🗑 Eliminar ticket
                   </Button>
@@ -807,16 +822,20 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                             <button
                               type="button"
                               className="hidden text-[10px] text-red-400 hover:text-red-600 group-hover:inline"
-                              onClick={async () => {
-                                if (!confirm("¿Eliminar esta nota?")) return;
-                                const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
-                                  method: "DELETE",
-                                  headers: { "Content-Type": "application/json" },
-                                  body: JSON.stringify({ notaId: n.id })
-                                });
-                                if (res.ok) setNotas((prev) => prev.filter((x) => x.id !== n.id));
-                                else toast.error("No se pudo eliminar la nota");
-                              }}
+                              onClick={() => setConfirmDialog({
+                                title: "Eliminar nota interna",
+                                description: "¿Eliminar esta nota? Solo la ven los admins, pero no se puede recuperar.",
+                                confirmLabel: "Eliminar",
+                                action: async () => {
+                                  const res = await fetch(`/api/tickets/${ticket.id}/notas`, {
+                                    method: "DELETE",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ notaId: n.id })
+                                  });
+                                  if (res.ok) setNotas((prev) => prev.filter((x) => x.id !== n.id));
+                                  else toast.error("No se pudo eliminar la nota");
+                                }
+                              })}
                             >
                               Eliminar
                             </button>
@@ -860,6 +879,30 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
         </div>
       </div>
+
+      {/* ── Dialog de confirmación ─────────────────────────────── */}
+      {confirmDialog && (
+        <Dialog
+          open
+          onClose={() => setConfirmDialog(null)}
+          title={confirmDialog.title}
+          description={confirmDialog.description}
+        >
+          <DialogActions>
+            <Button variant="outline" onClick={() => setConfirmDialog(null)}>Cancelar</Button>
+            <Button
+              className="bg-red-600 hover:bg-red-700 text-white"
+              onClick={() => {
+                const { action } = confirmDialog;
+                setConfirmDialog(null);
+                void action();
+              }}
+            >
+              {confirmDialog.confirmLabel}
+            </Button>
+          </DialogActions>
+        </Dialog>
+      )}
 
       {/* ── Lightbox ───────────────────────────────────────────── */}
       {lightbox && (

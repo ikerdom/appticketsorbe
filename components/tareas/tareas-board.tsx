@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { formatDateTimeEs } from "@/lib/dates";
 
 type TareaEstado = "PENDIENTE" | "EN_CURSO" | "HECHO";
@@ -98,8 +99,10 @@ function TareaCard({
     });
   }
 
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
   function deleteTarea() {
-    if (!confirm("¿Eliminar esta nota?")) return;
+    setDeleteConfirm(false);
     startTransition(async () => {
       const res = await fetch(`/api/tareas/${tarea.id}`, { method: "DELETE" });
       if (!res.ok) { toast.error("No se pudo eliminar"); return; }
@@ -126,7 +129,7 @@ function TareaCard({
           </span>
         </div>
         {canDelete && (
-          <button type="button" onClick={deleteTarea} className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500">
+          <button type="button" onClick={() => setDeleteConfirm(true)} className="rounded p-1 text-slate-300 hover:bg-red-50 hover:text-red-500">
             <Trash2 className="h-3.5 w-3.5" />
           </button>
         )}
@@ -168,6 +171,18 @@ function TareaCard({
       {tarea.estado === "HECHO" && tarea.resueltoAt && (
         <p className="text-[11px] text-emerald-600 font-medium">✓ Completada {formatDateTimeEs(tarea.resueltoAt)}</p>
       )}
+
+      <Dialog
+        open={deleteConfirm}
+        onClose={() => setDeleteConfirm(false)}
+        title="Eliminar nota"
+        description={`¿Eliminar "${tarea.titulo}"? No se puede recuperar.`}
+      >
+        <DialogActions>
+          <Button variant="outline" onClick={() => setDeleteConfirm(false)}>Cancelar</Button>
+          <Button onClick={deleteTarea} className="bg-red-600 hover:bg-red-700 text-white">Eliminar</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
