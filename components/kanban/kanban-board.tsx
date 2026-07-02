@@ -166,7 +166,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       }
       return true;
     });
-  }, [tickets, filters, historicoIds]);
+  }, [tickets, filters]);
 
   const grouped = useMemo(
     () => ({
@@ -197,9 +197,9 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
   // Re-runs the Server Component via Next.js App Router — fresh Prisma query,
   // no read-after-write race on Neon, React state is preserved during the refresh.
-  function scheduleSync() {
+  const scheduleSync = useCallback(() => {
     setTimeout(() => router.refresh(), 800);
-  }
+  }, [router]);
 
   async function handleTake(ticketId: string) {
     const previous = tickets;
@@ -317,7 +317,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
     toast.success("Ticket marcado como resuelto");
     scheduleSync();
-  }, [confirmPending]);
+  }, [confirmPending, scheduleSync]);
 
   const cancelResolve = useCallback(() => {
     if (!confirmPending) return;

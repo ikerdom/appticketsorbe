@@ -8,6 +8,7 @@ import { formatRelativeEs } from "@/lib/dates";
 
 type Notificacion = {
   id: string;
+  tipo: string;
   ticketId: string | null;
   mensaje: string;
   leida: boolean;
@@ -92,6 +93,7 @@ export function NotificationBell() {
                   setUnreadCount((prev) => Math.max(0, prev - (item.leida ? 0 : 1)));
                   setOpen(false);
                   if (item.ticketId) router.push(`/tickets/${item.ticketId}`);
+                  else if (item.tipo?.startsWith("PROPUESTA")) router.push("/propuestas");
                 }}
               >
                 <p className="line-clamp-2 text-sm">{item.mensaje}</p>

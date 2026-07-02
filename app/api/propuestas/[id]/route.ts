@@ -15,10 +15,33 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const body = patchSchema.parse(await request.json());
 
+    const previa = await prisma.propuesta.findUnique({ where: { id: params.id } });
+    if (!previa) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
+
     const updated = await prisma.propuesta.update({
       where: { id: params.id },
       data: body
     });
+
+    // Notificación in-app al autor cuando el admin cambia estado o responde
+    if (previa.userId && previa.userId !== user.id) {
+      let mensaje: string | null = null;
+      if (body.estado && body.estado !== previa.estado) {
+        const textos: Record<string, string> = {
+          REVISADA: `Tu propuesta "${previa.titulo}" está siendo revisada`,
+          ACEPTADA: `✅ Tu propuesta "${previa.titulo}" ha sido aceptada`,
+          DESCARTADA: `Tu propuesta "${previa.titulo}" ha sido descartada`
+        };
+        mensaje = textos[body.estado] ?? null;
+      } else if (body.notaAdmin && body.notaAdmin !== previa.notaAdmin) {
+        mensaje = `Nueva respuesta a tu propuesta "${previa.titulo}"`;
+      }
+      if (mensaje) {
+        await prisma.notification.create({
+          data: { tipo: "PROPUESTA_ESTADO", mensaje, usuarioId: previa.userId }
+        }).catch(() => null); // la notificación nunca debe romper el update
+      }
+    }
 
     return NextResponse.json({ propuesta: updated });
   } catch {
