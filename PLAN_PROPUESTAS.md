@@ -16,6 +16,7 @@ Versión: 1.0 · Fecha: 2026-06-19
 | Link "Propuestas" en navegación | ✅ Implementado 2026-06-19 |
 | Link admin en menú (💡 Propuestas) | ✅ Implementado 2026-06-19 |
 | Delete con Dialog (sin confirm nativo) | ✅ Implementado 2026-06-19 |
+| Notificación in-app al autor (cambio estado / respuesta admin) | ✅ Implementado 2026-07-02 |
 | **Categoría de propuesta** | ❌ No existe (M3) |
 | **Impacto estimado** | ❌ No existe (M4) |
 | **UX mejorada** | ❌ Cards básicas (M5) |
