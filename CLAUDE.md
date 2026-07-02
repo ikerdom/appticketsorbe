@@ -178,18 +178,20 @@ NOTIFICATIONS_ENABLED=true
 | Área | Estado |
 |------|--------|
 | Auth multi-empresa | ✅ Funciona |
-| Kanban drag & drop | ✅ Funciona (con bug de stale data — ver BUGS.md B001) |
+| Kanban drag & drop | ✅ Funciona (B001 resuelto con router.refresh) |
 | Tickets CRUD | ✅ Funciona |
+| Quality gate nuevo ticket | ✅ Mín 30 palabras o captura adjunta (B008 resuelto) |
 | Comentarios | ✅ Funciona |
 | Notas internas admin | ✅ Funciona |
 | Notificaciones in-app | ✅ Funciona |
 | Historial/auditoría | ✅ Funciona |
-| Upload imágenes (clipboard) | ✅ Funciona en prod |
+| Upload imágenes (clipboard) | ✅ Prod OK · compresión cliente en `lib/compress-image.ts` (B009) |
 | Upload PDFs y archivos | ⚪ No implementado (decisión deliberada) |
-| Vista pública sin login | ❌ No implementado (ver P2) |
-| Estadísticas avanzadas | ⚠️ Básicas — mejoras en P4 |
-| Exportar CSV | ❌ No implementado (ver P5) |
-| SLA por prioridad | ⚠️ Hardcoded a 72h (ver P7) |
+| Vista pública sin login | ✅ `/public/tickets/[id]` y `/public/tickets/t/[numero]` |
+| Estadísticas dashboard | ✅ Stat cards + alerta críticos + barra progreso por empresa |
+| Exportar CSV | ✅ `/api/admin/export` (separador `;` + BOM para Excel ES) |
+| SLA por prioridad | ✅ CRITICA 4h · ALTA 24h · MEDIA 72h · BAJA 120h |
+| Módulo propuestas | ✅ Nav + admin + Dialog delete · pendiente M3-M5 (PLAN_PROPUESTAS.md) |
 
 ---
 
