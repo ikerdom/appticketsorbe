@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  Plus, BarChart2, StickyNote, AlertTriangle,
+  Plus, BarChart2, BookOpen, AlertTriangle,
   CheckCircle2, Clock, Ticket, ArrowRight, ChevronRight
 } from "lucide-react";
 import { KanbanBoard } from "@/components/kanban/kanban-board";
@@ -161,16 +161,11 @@ export function AdminEmpresasPanel({
           Analytics
         </Link>
         <Link
-          href="/tareas"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 transition"
+          href="/historico"
+          className="inline-flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50 transition"
         >
-          <StickyNote className="h-4 w-4" />
-          Mis notas
-          {totalTickets > 0 && (
-            <span className="rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
-              {totalTickets}
-            </span>
-          )}
+          <BookOpen className="h-4 w-4" />
+          Histórico
         </Link>
       </div>
 

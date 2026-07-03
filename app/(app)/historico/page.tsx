@@ -26,7 +26,9 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
   const categoria = asString(searchParams.categoria) || "";
   const soloConSolucion = asString(searchParams.soloConSolucion) === "1";
 
-  const and: Prisma.TicketWhereInput[] = [{ estado: "RESUELTO", archivadoAt: null }];
+  // Histórico REAL: todos los resueltos, archivados o no. El filtro
+  // archivadoAt:null hacía "desaparecer" tickets a los 7 días (auto-archive).
+  const and: Prisma.TicketWhereInput[] = [{ estado: "RESUELTO" }];
   if (soloConSolucion) and.push({ notaResolucion: { not: null } });
   if (empresa) and.push({ destinos: { some: { empresaId: empresa } } });
   if (prioridad) and.push({ prioridad: prioridad as any });
@@ -53,7 +55,7 @@ export default async function HistoricoPage({ searchParams }: { searchParams: Se
         creador: { select: { email: true, nombre: true, name: true } }
       },
       orderBy: { resueltoAt: "desc" },
-      take: 200
+      take: 500
     }),
     prisma.empresa.findMany({
       where: { isActive: true, isGlobalTarget: false, deletedAt: null },

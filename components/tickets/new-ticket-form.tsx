@@ -142,9 +142,9 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const selectedPrioridad = useWatch({ control: form.control, name: "prioridad" });
   const descripcion = useWatch({ control: form.control, name: "descripcion" }) ?? "";
 
-  const MIN_PALABRAS = 30;
-  const palabras = useMemo(() => descripcion.trim().split(/\s+/).filter(Boolean).length, [descripcion]);
-  const descripcionOk = palabras >= MIN_PALABRAS || pendingImages.length > 0;
+  const MIN_CARACTERES = 100;
+  const caracteres = descripcion.trim().length;
+  const descripcionOk = caracteres >= MIN_CARACTERES;
 
   const allCategorias = useMemo(() => Array.from(new Set([...BASE_CATEGORIAS, ...categoriasCustom])), [categoriasCustom]);
 
@@ -168,12 +168,12 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   }
 
   const onSubmit = form.handleSubmit((values) => {
-    const wordCount = values.descripcion.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount < MIN_PALABRAS && pendingImages.length === 0) {
+    const chars = values.descripcion.trim().length;
+    if (chars < MIN_CARACTERES) {
       setDescError(
-        `Necesitamos más detalle para poder ayudarte (${wordCount}/${MIN_PALABRAS} palabras). ` +
+        `Necesitamos más detalle para poder ayudarte (${chars}/${MIN_CARACTERES} caracteres). ` +
         "Explica qué falla, cómo debería funcionar y qué ves exactamente. " +
-        "También puedes adjuntar una captura de pantalla con Ctrl+V."
+        "Adjunta también una captura de pantalla con Ctrl+V."
       );
       document.getElementById("descripcion")?.scrollIntoView({ behavior: "smooth", block: "center" });
       document.getElementById("descripcion")?.focus();
@@ -324,14 +324,12 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
               {descripcionOk ? (
                 <span className="flex items-center gap-1 text-emerald-600 font-medium">
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  {pendingImages.length > 0 && palabras < MIN_PALABRAS
-                    ? "Captura adjunta — listo"
-                    : `${palabras} palabras — suficiente`}
+                  {caracteres} caracteres — suficiente
                 </span>
               ) : (
-                <span className={`flex items-center gap-1 font-medium ${palabras > 0 ? "text-amber-600" : "text-slate-400"}`}>
+                <span className={`flex items-center gap-1 font-medium ${caracteres > 0 ? "text-amber-600" : "text-slate-400"}`}>
                   <AlertCircle className="h-3.5 w-3.5" />
-                  {palabras}/{MIN_PALABRAS} palabras mínimo
+                  {caracteres}/{MIN_CARACTERES} caracteres mínimo
                 </span>
               )}
             </div>

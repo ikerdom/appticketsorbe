@@ -232,6 +232,23 @@ Beneficio extra: la BD (base64 en Neon) engorda mucho menos por adjunto.
 
 ---
 
+## B010 — Histórico "borra" tickets a los 7 días
+
+**Estado:** 🟢 RESUELTO — 2026-07-03
+
+**Severidad:** ALTA
+
+**Descripción:**
+El histórico solo mostraba ~7 tickets. Los resueltos "desaparecían" pasados unos días, como si se borraran. No se borraba nada: era un filtro mal puesto.
+
+**Causa raíz:**
+`app/(app)/historico/page.tsx` filtraba `{ estado: "RESUELTO", archivadoAt: null }`. El auto-archive (cron + dashboard) marca `archivadoAt` en los resueltos con más de 7 días → esos tickets quedaban excluidos del histórico. Resultado: el "histórico" solo enseñaba los resueltos de la última semana.
+
+**Fix aplicado:**
+Quitar el filtro `archivadoAt: null` — el histórico muestra TODOS los resueltos, archivados o no. `take` subido de 200 a 500.
+
+---
+
 ## Cómo reportar un bug nuevo
 
 Para añadir un bug a este fichero, usar esta plantilla:
