@@ -9,6 +9,7 @@ import { Estado, Prioridad } from "@prisma/client";
 import { ChevronDown, ChevronUp, Plus, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogActions } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -41,6 +42,12 @@ const COLUMN_STYLES: Record<Estado, { header: string; dot: string; badge: string
     dot: "bg-amber-500",
     badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
     dropzone: "bg-amber-50/40"
+  },
+  BLOQUEADO: {
+    header: "bg-red-50 border-red-100 text-red-800",
+    dot: "bg-red-500",
+    badge: "bg-red-100 text-red-700 ring-1 ring-red-200",
+    dropzone: "bg-red-50/40"
   },
   RESUELTO: {
     header: "bg-emerald-50 border-emerald-100 text-emerald-800",
@@ -92,6 +99,9 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const [showHistorico, setShowHistorico] = useState(false);
   const [draggingOver, setDraggingOver] = useState<Estado | null>(null);
   const [confirmPending, setConfirmPending] = useState<{ ticketId: string; targetEstado: Estado; previous: TicketCardData[] } | null>(null);
+  const [notaResolucion, setNotaResolucion] = useState("");
+  const [blockPending, setBlockPending] = useState<{ ticketId: string; previous: TicketCardData[] } | null>(null);
+  const [motivoBloqueo, setMotivoBloqueo] = useState("");
 
   // Client-side filters — no API call on change
   const [filters, setFilters] = useState({
@@ -115,14 +125,14 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const collisionDetection: CollisionDetection = (args) => {
     const pointerHits = pointerWithin(args);
     // If pointer is within a column droppable, use that
-    const columnHit = pointerHits.find((c) => c.id === "ABIERTO" || c.id === "EN_CURSO" || c.id === "RESUELTO");
+    const columnHit = pointerHits.find((c) => c.id === "ABIERTO" || c.id === "EN_CURSO" || c.id === "BLOQUEADO" || c.id === "RESUELTO");
     if (columnHit) return [columnHit];
     // Otherwise fall back to closestCenter (works for ticket-over-ticket reorder)
     return closestCenter(args);
   };
 
   function getTargetEstado(overId: string): Estado | null {
-    if (overId === "ABIERTO" || overId === "EN_CURSO" || overId === "RESUELTO") return overId as Estado;
+    if (overId === "ABIERTO" || overId === "EN_CURSO" || overId === "BLOQUEADO" || overId === "RESUELTO") return overId as Estado;
     const overTicket = tickets.find((t) => t.id === overId);
     return overTicket?.estado ?? null;
   }
@@ -172,6 +182,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     () => ({
       ABIERTO: visibleTickets.filter((t) => t.estado === "ABIERTO"),
       EN_CURSO: visibleTickets.filter((t) => t.estado === "EN_CURSO"),
+      BLOQUEADO: visibleTickets.filter((t) => t.estado === "BLOQUEADO"),
       RESUELTO: visibleTickets.filter((t) => t.estado === "RESUELTO")
     }),
     [visibleTickets]
@@ -189,6 +200,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     () => ({
       ABIERTO: split(grouped.ABIERTO),
       EN_CURSO: split(grouped.EN_CURSO),
+      BLOQUEADO: split(grouped.BLOQUEADO),
       RESUELTO: split(grouped.RESUELTO)
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -257,12 +269,23 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     const previous = tickets;
     const now = new Date();
 
+    if (targetEstado === "BLOQUEADO") {
+      // Optimistic update first so the card moves visually
+      setTickets(tickets.map((t) =>
+        t.id === ticketId ? { ...t, estado: "BLOQUEADO" as const, updatedAt: now } : t
+      ));
+      setMotivoBloqueo("");
+      setBlockPending({ ticketId, previous });
+      return;
+    }
+
     if (targetEstado === "RESUELTO") {
       // Optimistic update first so the card moves visually
       setTickets(tickets.map((t) =>
         t.id === ticketId ? { ...t, estado: targetEstado, resueltoAt: now, updatedAt: now } : t
       ));
-      // Then ask for confirmation via dialog
+      // Then ask for confirmation via dialog (nota de resolución obligatoria)
+      setNotaResolucion("");
       setConfirmPending({ ticketId, targetEstado, previous });
       return;
     }
@@ -299,13 +322,15 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
   const confirmResolve = useCallback(async () => {
     if (!confirmPending) return;
-    const { ticketId, targetEstado, previous } = confirmPending;
+    if (!notaResolucion.trim()) return; // botón disabled, por seguridad
+
+    const { ticketId, previous } = confirmPending;
     setConfirmPending(null);
 
     const response = await fetch(`/api/tickets/${ticketId}/estado`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: targetEstado })
+      body: JSON.stringify({ action: "resolve", notaResolucion: notaResolucion.trim() })
     });
 
     if (!response.ok) {
@@ -317,7 +342,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
     toast.success("Ticket marcado como resuelto");
     scheduleSync();
-  }, [confirmPending, scheduleSync]);
+  }, [confirmPending, notaResolucion, scheduleSync]);
 
   const cancelResolve = useCallback(() => {
     if (!confirmPending) return;
@@ -325,24 +350,93 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     setConfirmPending(null);
   }, [confirmPending]);
 
+  const confirmBlock = useCallback(async () => {
+    if (!blockPending) return;
+    if (!motivoBloqueo.trim()) return; // botón disabled, por seguridad
+
+    const { ticketId, previous } = blockPending;
+    setBlockPending(null);
+
+    const response = await fetch(`/api/tickets/${ticketId}/estado`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: "BLOQUEADO", motivoBloqueo: motivoBloqueo.trim() })
+    });
+
+    if (!response.ok) {
+      setTickets(previous);
+      const body = await response.json().catch(() => ({ error: "No se pudo bloquear el ticket" }));
+      toast.error(body.error ?? "No se pudo bloquear el ticket");
+      return;
+    }
+
+    toast.success("Ticket marcado como bloqueado");
+    scheduleSync();
+  }, [blockPending, motivoBloqueo, scheduleSync]);
+
+  const cancelBlock = useCallback(() => {
+    if (!blockPending) return;
+    setTickets(blockPending.previous);
+    setBlockPending(null);
+    setMotivoBloqueo("");
+  }, [blockPending]);
+
   return (
     <div className="space-y-4">
       <Dialog
         open={confirmPending !== null}
         onClose={cancelResolve}
         title="¿Marcar como resuelto?"
-        description="El ticket se cerrará y se notificará al creador. Puedes añadir una nota de resolución desde el detalle del ticket."
+        description="Añade una nota explicando cómo se resolvió. El creador la recibirá como respuesta."
       >
+        <Textarea
+          value={notaResolucion}
+          onChange={(e) => setNotaResolucion(e.target.value)}
+          placeholder="Ej: Se actualizó el permiso del usuario. Se reinició el servicio y verificamos que funciona correctamente..."
+          rows={3}
+          autoFocus
+          className="mb-3"
+        />
         <DialogActions>
           <Button type="button" variant="outline" onClick={cancelResolve}>
             Cancelar
           </Button>
           <Button
             type="button"
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            disabled={!notaResolucion.trim()}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
             onClick={confirmResolve}
           >
             Marcar resuelto
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={blockPending !== null}
+        onClose={cancelBlock}
+        title="¿Bloquear este ticket?"
+        description="Indica el motivo del bloqueo. Será visible para el creador del ticket."
+      >
+        <Textarea
+          value={motivoBloqueo}
+          onChange={(e) => setMotivoBloqueo(e.target.value)}
+          placeholder="Ej: La web está en mantenimiento hasta el lunes. Pendiente de que el proveedor responda..."
+          rows={3}
+          autoFocus
+          className="mb-3"
+        />
+        <DialogActions>
+          <Button type="button" variant="outline" onClick={cancelBlock}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            disabled={!motivoBloqueo.trim()}
+            className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            onClick={confirmBlock}
+          >
+            Bloquear ticket
           </Button>
         </DialogActions>
       </Dialog>
@@ -463,7 +557,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       ) : null}
 
       <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => setDraggingOver(null)}>
-        <div className="hidden gap-4 md:grid md:grid-cols-3" role="list" aria-label="Kanban de tickets">
+        <div className="hidden gap-4 md:grid md:grid-cols-4" role="list" aria-label="Kanban de tickets">
           {(Object.keys(grouped) as Estado[]).map((estado) => {
             const { mine, others } = groupedSplit[estado];
             const all = grouped[estado];

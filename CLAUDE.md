@@ -179,9 +179,11 @@ NOTIFICATIONS_ENABLED=true
 | Área | Estado |
 |------|--------|
 | Auth multi-empresa | ✅ Funciona |
-| Kanban drag & drop | ✅ Funciona (B001 resuelto con router.refresh) |
+| Kanban drag & drop | ✅ Funciona (B001 resuelto con router.refresh) · 4ª columna BLOQUEADO |
 | Tickets CRUD | ✅ Funciona |
-| Quality gate nuevo ticket | ✅ Mín 30 palabras o captura adjunta (B008 resuelto) |
+| Estado BLOQUEADO | ✅ Con motivo obligatorio · SLA pausado (PLAN_BLOQUEADOS.md B1-B7) |
+| Nota obligatoria al resolver | ✅ En kanban y en detalle de ticket (PLAN_BLOQUEADOS.md B5) |
+| Quality gate nuevo ticket | ✅ Mín 100 caracteres (B008 resuelto) |
 | Comentarios | ✅ Funciona |
 | Notas internas admin | ✅ Funciona |
 | Notificaciones in-app | ✅ Funciona |

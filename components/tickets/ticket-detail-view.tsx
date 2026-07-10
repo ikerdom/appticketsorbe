@@ -721,7 +721,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   <div className="space-y-1">
                     <label className="text-xs font-medium text-emerald-800">
                       📖 ¿Cómo se solucionó?{" "}
-                      <span className="font-normal text-emerald-600">(recomendado)</span>
+                      <span className="font-normal text-emerald-600">(obligatorio)</span>
                     </label>
                     <Textarea
                       rows={3}
@@ -745,7 +745,11 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                       />
                     </div>
                   )}
-                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion || undefined })}>
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
+                    disabled={!notaResolucion.trim()}
+                    onClick={() => void performAction("resolve", { horasDedicadas: horasDedicadas ? parseFloat(horasDedicadas) : undefined, notaResolucion: notaResolucion.trim() })}
+                  >
                     ✓ Marcar resuelto
                   </Button>
                 </div>

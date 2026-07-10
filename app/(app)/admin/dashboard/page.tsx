@@ -86,8 +86,8 @@ export default async function AdminDashboardPage({
       })
     ]);
 
-  const estado = { ABIERTO: 0, EN_CURSO: 0, RESUELTO: 0 };
-  const estadoPrev = { ABIERTO: 0, EN_CURSO: 0, RESUELTO: 0 };
+  const estado = { ABIERTO: 0, EN_CURSO: 0, BLOQUEADO: 0, RESUELTO: 0 };
+  const estadoPrev = { ABIERTO: 0, EN_CURSO: 0, BLOQUEADO: 0, RESUELTO: 0 };
   for (const item of estadoGroup) estado[item.estado] = item._count.estado;
   for (const item of prevEstadoGroup) estadoPrev[item.estado] = item._count.estado;
 

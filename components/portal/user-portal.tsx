@@ -4,11 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle, AlertTriangle, ArrowRight, CheckCircle2,
-  ChevronDown, ChevronRight, ChevronUp, Clock, MessageSquare, Plus
+  ChevronDown, ChevronRight, ChevronUp, Clock, Lock, MessageSquare, Plus
 } from "lucide-react";
 import { formatRelativeEs } from "@/lib/dates";
 
-type TicketEstado = "ABIERTO" | "EN_CURSO" | "RESUELTO";
+type TicketEstado = "ABIERTO" | "EN_CURSO" | "BLOQUEADO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
 
 interface PortalTicket {
@@ -18,6 +18,7 @@ interface PortalTicket {
   prioridad: Prioridad;
   updatedAt: Date | string;
   unread: boolean;
+  motivoBloqueo?: string | null;
   empresaOrigen: { nombre: string; color: string | null };
   creador: { nombre: string | null; name: string | null; email: string };
   _count: { comentarios: number };
@@ -77,6 +78,14 @@ const COL_CONFIG: Record<TicketEstado, {
     badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
     bg: "bg-amber-50/30"
   },
+  BLOQUEADO: {
+    label: "Bloqueados",
+    icon: <Lock className="h-3.5 w-3.5" />,
+    header: "bg-red-50 border-red-100 text-red-800",
+    dot: "bg-red-500",
+    badge: "bg-red-100 text-red-700 ring-1 ring-red-200",
+    bg: "bg-red-50/30"
+  },
   RESUELTO: {
     label: "Resueltos",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />,
@@ -101,11 +110,12 @@ const PRIORIDAD_LABEL: Record<Prioridad, string> = {
 export function UserPortal({ tickets }: UserPortalProps) {
   const [showResueltos, setShowResueltos] = useState(false);
 
-  const abiertos  = tickets.filter(t => t.estado === "ABIERTO");
-  const enCurso   = tickets.filter(t => t.estado === "EN_CURSO");
-  const resueltos = tickets.filter(t => t.estado === "RESUELTO");
-  const sinLeer   = tickets.filter(t => t.unread).length;
-  const activos   = abiertos.length + enCurso.length;
+  const abiertos   = tickets.filter(t => t.estado === "ABIERTO");
+  const enCurso    = tickets.filter(t => t.estado === "EN_CURSO");
+  const bloqueados = tickets.filter(t => t.estado === "BLOQUEADO");
+  const resueltos  = tickets.filter(t => t.estado === "RESUELTO");
+  const sinLeer    = tickets.filter(t => t.unread).length;
+  const activos    = abiertos.length + enCurso.length + bloqueados.length;
 
   const criticosAbiertos = abiertos.filter(t => t.prioridad === "CRITICA");
 
@@ -210,10 +220,11 @@ export function UserPortal({ tickets }: UserPortalProps) {
         </div>
       ) : (
         <>
-          {/* Desktop: 3 cols */}
-          <div className="hidden gap-3 md:grid md:grid-cols-3">
+          {/* Desktop: 4 cols */}
+          <div className="hidden gap-3 md:grid md:grid-cols-4">
             <KanbanCol estado="ABIERTO"  tickets={abiertos} />
             <KanbanCol estado="EN_CURSO" tickets={enCurso} />
+            <KanbanCol estado="BLOQUEADO" tickets={bloqueados} />
             {/* Resueltos colapsables */}
             <div className="space-y-2">
               <ColHeader estado="RESUELTO" count={resueltos.length} />
@@ -241,11 +252,16 @@ export function UserPortal({ tickets }: UserPortalProps) {
 
           {/* Mobile: lista */}
           <div className="space-y-3 md:hidden">
-            {(["ABIERTO", "EN_CURSO", "RESUELTO"] as TicketEstado[]).map(estado => (
+            {(["ABIERTO", "EN_CURSO", "BLOQUEADO", "RESUELTO"] as TicketEstado[]).map(estado => (
               <KanbanCol
                 key={estado}
                 estado={estado}
-                tickets={estado === "ABIERTO" ? abiertos : estado === "EN_CURSO" ? enCurso : resueltos}
+                tickets={
+                  estado === "ABIERTO" ? abiertos
+                  : estado === "EN_CURSO" ? enCurso
+                  : estado === "BLOQUEADO" ? bloqueados
+                  : resueltos
+                }
               />
             ))}
           </div>
@@ -311,6 +327,12 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
       <p className={`line-clamp-2 text-sm font-semibold leading-snug ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
         {ticket.titulo}
       </p>
+      {ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
+        <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2 py-1.5">
+          <Lock className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
+          <p className="text-[11px] leading-snug text-red-500 line-clamp-2">{ticket.motivoBloqueo}</p>
+        </div>
+      )}
       <p className="mt-1 text-[10px] text-slate-400">
         {formatRelativeEs(ticket.updatedAt)}
       </p>

@@ -12,9 +12,10 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const user = await requireCurrentUser();
     const body = (await request.json()) as {
       action?: TicketAction;
-      estado?: "ABIERTO" | "EN_CURSO" | "RESUELTO";
+      estado?: "ABIERTO" | "EN_CURSO" | "BLOQUEADO" | "RESUELTO";
       horasDedicadas?: number;
       notaResolucion?: string;
+      motivoBloqueo?: string;
     };
 
     const ticket = await prisma.ticket.findUnique({
@@ -41,20 +42,27 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       if (!isAdmin) {
         return NextResponse.json({ error: "Solo un administrador puede marcar un ticket en curso." }, { status: 403 });
       }
-      data = { asignadoId: user.id, estado: "EN_CURSO", resueltoAt: null };
+      data = { asignadoId: user.id, estado: "EN_CURSO", resueltoAt: null, motivoBloqueo: null };
       accionHistorial = "TICKET_COGIDO";
       detalle = { de: ticket.estado, a: "EN_CURSO", asignadoId: user.id };
     } else if (action === "resolve") {
+      if (!body.notaResolucion?.trim()) {
+        return NextResponse.json(
+          { error: "Es obligatorio añadir una nota de resolución." },
+          { status: 400 }
+        );
+      }
       data = {
         estado: "RESUELTO",
         resueltoAt: new Date(),
+        motivoBloqueo: null,
         ...(body.horasDedicadas != null ? { horasDedicadas: body.horasDedicadas } : {}),
-        ...(body.notaResolucion ? { notaResolucion: body.notaResolucion } : {})
+        notaResolucion: body.notaResolucion.trim()
       };
       accionHistorial = "ESTADO_CAMBIADO";
       detalle = { de: ticket.estado, a: "RESUELTO", horasDedicadas: body.horasDedicadas, notaResolucion: body.notaResolucion };
     } else if (action === "reopen") {
-      data = { estado: "ABIERTO", resueltoAt: null };
+      data = { estado: "ABIERTO", resueltoAt: null, motivoBloqueo: null };
       accionHistorial = "ESTADO_CAMBIADO";
       detalle = { de: ticket.estado, a: "ABIERTO" };
     } else if (action === "archive") {
@@ -74,14 +82,30 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         if (!isAdmin) {
           return NextResponse.json({ error: "Solo un administrador puede marcar un ticket en curso." }, { status: 403 });
         }
-        data = { estado, asignadoId: ticket.asignadoId ?? user.id, resueltoAt: null };
+        data = { estado, asignadoId: ticket.asignadoId ?? user.id, resueltoAt: null, motivoBloqueo: null };
       } else if (estado === "ABIERTO") {
-        data = { estado, asignadoId: null, resueltoAt: null };
+        data = { estado, asignadoId: null, resueltoAt: null, motivoBloqueo: null };
+      } else if (estado === "BLOQUEADO") {
+        if (!body.motivoBloqueo?.trim()) {
+          return NextResponse.json(
+            { error: "Es obligatorio indicar el motivo del bloqueo." },
+            { status: 400 }
+          );
+        }
+        data = { estado, motivoBloqueo: body.motivoBloqueo.trim() };
       } else {
-        data = { estado, resueltoAt: new Date() };
+        // RESUELTO via set_estado directo: el kanban usa action "resolve" (con nota obligatoria).
+        // Este camino solo se alcanzaría si alguien llama a la API distinto — misma exigencia de nota.
+        if (!body.notaResolucion?.trim()) {
+          return NextResponse.json(
+            { error: "Es obligatorio añadir una nota de resolución." },
+            { status: 400 }
+          );
+        }
+        data = { estado, resueltoAt: new Date(), motivoBloqueo: null, notaResolucion: body.notaResolucion.trim() };
       }
       accionHistorial = "ESTADO_CAMBIADO";
-      detalle = { de: ticket.estado, a: estado };
+      detalle = { de: ticket.estado, a: estado, motivoBloqueo: body.motivoBloqueo };
     }
 
     const updated = await prisma.ticket.update({

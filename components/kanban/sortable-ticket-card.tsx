@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Check, Link2, MessageCircle } from "lucide-react";
+import { Calendar, Check, Link2, Lock, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -22,7 +22,7 @@ const SLA_HORAS: Record<string, number> = {
 
 /** Returns SLA status based on ticket age vs. priority-specific SLA limit */
 function getSlaStatus(createdAt: Date, estado: string, prioridad: string): { label: string; color: string; ring: string; pulse?: boolean } | null {
-  if (estado === "RESUELTO") return null;
+  if (estado === "RESUELTO" || estado === "BLOQUEADO") return null; // SLA pausado mientras está bloqueado
   const hours = (Date.now() - new Date(createdAt).getTime()) / 3600000;
   const limit = SLA_HORAS[prioridad] ?? 72;
   const label = hours < 24 ? `${Math.round(hours)}h` : `${Math.floor(hours / 24)}d`;
@@ -103,6 +103,10 @@ export function SortableTicketCard({
           <span className="font-mono text-[10px] font-bold text-slate-400">
             #{String(ticket.numero).padStart(4, "0")}
           </span>
+          <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
+            <Calendar className="h-2.5 w-2.5" />
+            {formatRelativeEs(ticket.createdAt)}
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           {sla && (
@@ -132,6 +136,16 @@ export function SortableTicketCard({
         </p>
       ) : null}
 
+      {ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
+        <div className="mb-2 flex items-start gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5">
+          <Lock className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold text-red-600">Bloqueado · {formatRelativeEs(ticket.updatedAt)}</p>
+            <p className="text-[11px] leading-snug text-red-500">{ticket.motivoBloqueo}</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5">
           <Badge
@@ -144,7 +158,6 @@ export function SortableTicketCard({
             <span className="text-[11px] text-slate-400">+{destinos.length - 1}</span>
           ) : null}
         </div>
-        <span className="text-[11px] text-slate-400">{formatRelativeEs(ticket.createdAt)}</span>
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-1">
