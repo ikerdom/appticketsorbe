@@ -16,6 +16,7 @@ Antes de tocar código, lee siempre estos documentos en este orden:
 | [BUGS.md](./BUGS.md) | Bugs conocidos con causa raíz y fix | Antes de arreglar cualquier bug |
 | [PLAN_MEJORAS.md](./PLAN_MEJORAS.md) | Mejoras planificadas con código exacto | Cuando vayas a implementar una feature |
 | [PLAN_PROPUESTAS.md](./PLAN_PROPUESTAS.md) | Plan módulo Propuestas de Mejora | Cuando trabajes en el módulo de propuestas |
+| [PLAN_BLOQUEADOS.md](./PLAN_BLOQUEADOS.md) | Estado BLOQUEADO + nota obligatoria al resolver | Cuando implementes bloqueos de tickets |
 | [README.md](./README.md) | Setup inicial, deploy, comandos | Para arrancar el proyecto |
 
 ---
