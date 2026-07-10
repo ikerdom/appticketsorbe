@@ -23,11 +23,11 @@ export async function autoCloseStaleTickets() {
 }
 
 /**
- * Archiva tickets resueltos hace más de 7 días.
+ * Archiva tickets resueltos hace más de 2 días.
  * Van al histórico y desaparecen del panel principal.
  */
 export async function autoArchiveResolvedTickets() {
-  const threshold = subDays(new Date(), 7);
+  const threshold = subDays(new Date(), 2);
   const result = await prisma.ticket.updateMany({
     where: {
       estado: "RESUELTO",

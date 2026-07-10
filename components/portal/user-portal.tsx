@@ -14,6 +14,7 @@ type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
 
 interface PortalTicket {
   id: string;
+  numero: number;
   titulo: string;
   estado: TicketEstado;
   prioridad: Prioridad;
@@ -350,7 +351,7 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
           <Dialog
             open={showMotivo}
             onClose={() => setShowMotivo(false)}
-            title="Motivo del bloqueo"
+            title={`#${String(ticket.numero).padStart(4, "0")} · ${ticket.titulo}`}
             description={`Bloqueado ${formatDateTimeEs(ticket.updatedAt)}`}
           >
             <p className="whitespace-pre-wrap rounded-lg border border-red-100 bg-red-50 p-3 text-sm leading-relaxed text-red-700">

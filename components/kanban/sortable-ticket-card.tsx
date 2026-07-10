@@ -208,7 +208,7 @@ export function SortableTicketCard({
         <Dialog
           open={showMotivo}
           onClose={() => setShowMotivo(false)}
-          title="Motivo del bloqueo"
+          title={`#${String(ticket.numero).padStart(4, "0")} · ${ticket.titulo}`}
           description={`Bloqueado ${formatDateTimeEs(ticket.updatedAt)}`}
         >
           <p className="whitespace-pre-wrap rounded-lg bg-red-50 border border-red-100 p-3 text-sm leading-relaxed text-red-700">
