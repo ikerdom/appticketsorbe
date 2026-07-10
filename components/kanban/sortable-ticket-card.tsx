@@ -8,8 +8,9 @@ import { Calendar, Check, Link2, Lock, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
 import { PRIORIDAD_LABELS } from "@/lib/constants";
-import { formatRelativeEs } from "@/lib/dates";
+import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
 import type { TicketCardData } from "@/types/ticket";
 import type { Prioridad } from "@prisma/client";
 
@@ -55,6 +56,7 @@ export function SortableTicketCard({
   onTake?: (ticketId: string) => void;
 }) {
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showMotivo, setShowMotivo] = useState(false);
 
   async function handleCopyLink(e: React.MouseEvent) {
     e.stopPropagation();
@@ -137,13 +139,14 @@ export function SortableTicketCard({
       ) : null}
 
       {ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
-        <div className="mb-2 flex items-start gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5">
-          <Lock className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-red-600">Bloqueado · {formatRelativeEs(ticket.updatedAt)}</p>
-            <p className="text-[11px] leading-snug text-red-500">{ticket.motivoBloqueo}</p>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShowMotivo(true); }}
+          className="mb-2 flex w-full items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1 text-left hover:bg-red-100 transition"
+        >
+          <Lock className="h-3 w-3 shrink-0 text-red-500" />
+          <span className="truncate text-[11px] font-semibold text-red-600">Bloqueado · ver motivo</span>
+        </button>
       )}
 
       <div className="flex items-center justify-between gap-2">
@@ -200,6 +203,19 @@ export function SortableTicketCard({
           → En curso
         </button>
       ) : null}
+
+      {ticket.motivoBloqueo && (
+        <Dialog
+          open={showMotivo}
+          onClose={() => setShowMotivo(false)}
+          title="Motivo del bloqueo"
+          description={`Bloqueado ${formatDateTimeEs(ticket.updatedAt)}`}
+        >
+          <p className="whitespace-pre-wrap rounded-lg bg-red-50 border border-red-100 p-3 text-sm leading-relaxed text-red-700">
+            {ticket.motivoBloqueo}
+          </p>
+        </Dialog>
+      )}
     </Card>
   );
 }

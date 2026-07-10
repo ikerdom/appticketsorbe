@@ -6,7 +6,8 @@ import {
   AlertCircle, AlertTriangle, ArrowRight, CheckCircle2,
   ChevronDown, ChevronRight, ChevronUp, Clock, Lock, MessageSquare, Plus
 } from "lucide-react";
-import { formatRelativeEs } from "@/lib/dates";
+import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
+import { Dialog } from "@/components/ui/dialog";
 
 type TicketEstado = "ABIERTO" | "EN_CURSO" | "BLOQUEADO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
@@ -303,6 +304,7 @@ function KanbanCol({ estado, tickets }: { estado: TicketEstado; tickets: PortalT
 }
 
 function TicketCard({ ticket }: { ticket: PortalTicket }) {
+  const [showMotivo, setShowMotivo] = useState(false);
   return (
     <Link
       href={`/tickets/${ticket.id}`}
@@ -328,14 +330,35 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
         {ticket.titulo}
       </p>
       {ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
-        <div className="mt-1.5 flex items-start gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2 py-1.5">
-          <Lock className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
-          <p className="text-[11px] leading-snug text-red-500 line-clamp-2">{ticket.motivoBloqueo}</p>
-        </div>
+        <button
+          type="button"
+          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setShowMotivo(true); }}
+          className="mt-1.5 flex w-full items-center gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2 py-1 text-left hover:bg-red-100 transition"
+        >
+          <Lock className="h-3 w-3 shrink-0 text-red-500" />
+          <span className="truncate text-[11px] font-semibold text-red-600">Bloqueado · ver motivo</span>
+        </button>
       )}
       <p className="mt-1 text-[10px] text-slate-400">
         {formatRelativeEs(ticket.updatedAt)}
       </p>
+
+      {ticket.motivoBloqueo && (
+        // stopPropagation: el Dialog vive dentro del <Link> de la card — sin esto,
+        // cerrar el popup (X, backdrop) dispararía también la navegación al ticket
+        <div onClick={(e) => e.stopPropagation()}>
+          <Dialog
+            open={showMotivo}
+            onClose={() => setShowMotivo(false)}
+            title="Motivo del bloqueo"
+            description={`Bloqueado ${formatDateTimeEs(ticket.updatedAt)}`}
+          >
+            <p className="whitespace-pre-wrap rounded-lg border border-red-100 bg-red-50 p-3 text-sm leading-relaxed text-red-700">
+              {ticket.motivoBloqueo}
+            </p>
+          </Dialog>
+        </div>
+      )}
     </Link>
   );
 }

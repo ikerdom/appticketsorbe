@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ImagePlus, Link2, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ImagePlus, Link2, Lock, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { compressImage } from "@/lib/compress-image";
 import { Badge } from "@/components/ui/badge";
@@ -105,6 +105,25 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
   const destinos = useMemo(() => ticket.destinos.filter((item) => !item.empresa.isGlobalTarget), [ticket.destinos]);
   const canResolve = currentEstado !== "RESUELTO";
+
+  // Historial legible de bloqueos y resoluciones — motivoBloqueo/notaResolucion
+  // se sobrescriben en cada ciclo, así que sin esto los motivos/notas anteriores
+  // se pierden si el ticket se bloquea o resuelve más de una vez.
+  const eventosBloqueoResolucion = useMemo(() => {
+    type Evento = { id: string; tipo: "bloqueo" | "resolucion"; texto: string; createdAt: Date; autorNombre: string };
+    const eventos: Evento[] = [];
+    for (const h of ticket.historial) {
+      const detalle = h.detalle as { a?: string; motivoBloqueo?: string; notaResolucion?: string } | null;
+      if (!detalle) continue;
+      const autorNombre = h.autor?.nombre || h.autor?.name || h.autor?.email || "—";
+      if (detalle.a === "BLOQUEADO" && detalle.motivoBloqueo?.trim()) {
+        eventos.push({ id: h.id, tipo: "bloqueo", texto: detalle.motivoBloqueo, createdAt: new Date(h.createdAt), autorNombre });
+      } else if (detalle.a === "RESUELTO" && detalle.notaResolucion?.trim()) {
+        eventos.push({ id: h.id, tipo: "resolucion", texto: detalle.notaResolucion, createdAt: new Date(h.createdAt), autorNombre });
+      }
+    }
+    return eventos.reverse(); // más reciente primero
+  }, [ticket.historial]);
 
   useEffect(() => {
     const onEsc = (event: KeyboardEvent) => {
@@ -432,6 +451,43 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           />
         </CardContent>
       </Card>
+
+      {/* Historial de bloqueos y resoluciones — se conservan aunque el ticket se bloquee/resuelva varias veces */}
+      {eventosBloqueoResolucion.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold text-slate-600 uppercase tracking-wide">
+              Historial de bloqueos y resoluciones
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {eventosBloqueoResolucion.map((evento) => (
+              <div
+                key={evento.id}
+                className={`flex items-start gap-2 rounded-xl border p-3 ${
+                  evento.tipo === "bloqueo"
+                    ? "border-red-100 bg-red-50"
+                    : "border-emerald-100 bg-emerald-50"
+                }`}
+              >
+                {evento.tipo === "bloqueo" ? (
+                  <Lock className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                ) : (
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold ${evento.tipo === "bloqueo" ? "text-red-600" : "text-emerald-600"}`}>
+                    {evento.tipo === "bloqueo" ? "Bloqueado" : "Resuelto"} por {evento.autorNombre} · {formatDateTimeEs(evento.createdAt)}
+                  </p>
+                  <p className={`mt-0.5 whitespace-pre-wrap text-sm leading-relaxed ${evento.tipo === "bloqueo" ? "text-red-700" : "text-emerald-800"}`}>
+                    {evento.texto}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
         <div className="space-y-4">
