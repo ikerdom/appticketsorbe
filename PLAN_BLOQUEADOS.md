@@ -16,9 +16,10 @@ Versión: 1.0 · Fecha: 2026-07-10
 | [B3](#b3--api--lógica-de-bloqueo) | API route: aceptar BLOQUEADO + desbloqueo | 20 min | 🔴 CRÍTICO |
 | [B4](#b4--columna-bloqueado-en-kanban) | 4ª columna en kanban + dialog de bloqueo | 1h | 🔴 CRÍTICO |
 | [B5](#b5--nota-obligatoria-al-resolver) | Nota obligatoria al marcar RESUELTO | 30 min | 🟠 ALTA |
-| [B6](#b6--mostrar-motivo-en-tarjeta) | Mostrar motivo en tarjeta bloqueada | 20 min | 🟡 MEDIA |
+| [B6](#b6--mostrar-motivo-en-tarjeta-bloqueada) | Mostrar motivo en tarjeta bloqueada | 20 min | 🟡 MEDIA |
+| [B7](#b7--fecha-más-visible-en-tarjeta) | Fecha al header de tarjeta (con icono Calendar) | 15 min | 🟡 MEDIA |
 
-**Orden:** B1 → B2 → migración → B3 → B4 → B5 → B6 → build → push
+**Orden:** B1 → B2 → migración → B3 → B4 → B5 → B6 → B7 → build → push
 
 ---
 
@@ -440,6 +441,78 @@ function getSlaStatus(createdAt: Date, estado: string, prioridad: string): ... {
 
 ---
 
+## B7 — Fecha más visible en tarjeta
+
+**Archivo:** `components/kanban/sortable-ticket-card.tsx`
+
+**Problema actual:** La fecha está en la línea del badge de empresa como `text-[11px] text-slate-400` — compite visualmente y es casi invisible.
+
+**Fix:** Mover la fecha al header de la tarjeta (fila superior), junto al número de ticket, con icono de calendario. Reemplazar el texto relativo por uno más visible.
+
+```tsx
+// ANTES — header de la tarjeta (líneas 98-118):
+<div className="mb-2.5 flex items-center justify-between gap-2">
+  <div className="flex items-center gap-1.5">
+    {ticket.unread && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />}
+    <span className="font-mono text-[10px] font-bold text-slate-400">
+      #{String(ticket.numero).padStart(4, "0")}
+    </span>
+  </div>
+  <div className="flex items-center gap-1.5">
+    {/* SLA + prioridad */}
+  </div>
+</div>
+
+// DESPUÉS — añadir fecha junto al número, con icono:
+import { Calendar } from "lucide-react"; // añadir al import existente
+
+<div className="mb-2.5 flex items-center justify-between gap-2">
+  <div className="flex items-center gap-1.5">
+    {ticket.unread && <div className="h-2 w-2 rounded-full bg-indigo-500 shrink-0" />}
+    <span className="font-mono text-[10px] font-bold text-slate-400">
+      #{String(ticket.numero).padStart(4, "0")}
+    </span>
+    <span className="flex items-center gap-0.5 text-[10px] text-slate-400">
+      <Calendar className="h-2.5 w-2.5" />
+      {formatRelativeEs(ticket.createdAt)}
+    </span>
+  </div>
+  <div className="flex items-center gap-1.5">
+    {/* SLA + prioridad — sin cambios */}
+  </div>
+</div>
+```
+
+**Eliminar la fecha de la línea inferior** (línea 147) donde ahora duplicaría:
+```tsx
+// ANTES:
+<div className="flex items-center justify-between gap-2">
+  <div>...badge empresa...</div>
+  <span className="text-[11px] text-slate-400">{formatRelativeEs(ticket.createdAt)}</span>
+</div>
+
+// DESPUÉS — quitar el span de fecha de ahí:
+<div className="flex items-center justify-between gap-2">
+  <div>...badge empresa...</div>
+  {/* fecha eliminada de aquí — ya está en el header */}
+</div>
+```
+
+**Para tarjetas BLOQUEADAS** — mostrar también la fecha de bloqueo en el banner rojo:
+```tsx
+{ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
+  <div className="mb-2 flex items-start gap-1.5 rounded-lg border border-red-100 bg-red-50 px-2.5 py-1.5">
+    <Lock className="mt-0.5 h-3 w-3 shrink-0 text-red-500" />
+    <div className="min-w-0">
+      <p className="text-[11px] font-semibold text-red-600">Bloqueado · {formatRelativeEs(ticket.updatedAt)}</p>
+      <p className="text-[11px] leading-snug text-red-500">{ticket.motivoBloqueo}</p>
+    </div>
+  </div>
+)}
+```
+
+---
+
 ## Archivos a modificar
 
 | Archivo | Cambios |
@@ -447,7 +520,7 @@ function getSlaStatus(createdAt: Date, estado: string, prioridad: string): ... {
 | `prisma/schema.prisma` | B1+B2: enum `BLOQUEADO` + campo `motivoBloqueo` |
 | `app/api/tickets/[id]/estado/route.ts` | B3: aceptar BLOQUEADO, validar motivo + nota resolución obligatoria |
 | `components/kanban/kanban-board.tsx` | B4: 4ª columna, estados separados, dialog bloqueo; B5: dialog resolve con nota |
-| `components/kanban/sortable-ticket-card.tsx` | B6: badge motivo, SLA pause en BLOQUEADO |
+| `components/kanban/sortable-ticket-card.tsx` | B6: badge motivo, SLA pause en BLOQUEADO; B7: fecha en header |
 | `types/ticket.ts` (o donde esté el tipo) | B6: añadir `motivoBloqueo` al tipo de tarjeta |
 
 ---
