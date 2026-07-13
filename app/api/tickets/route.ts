@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
 
     const activeCompanies = await prisma.empresa.findMany({
       where: { isActive: true, isGlobalTarget: false, deletedAt: null },
-      select: { id: true }
+      select: { id: true, nombre: true }
     });
     const allowed = new Set(activeCompanies.map((c) => c.id));
     const uniqueDestinatarios = Array.from(new Set(data.destinatarios)).filter((id) => allowed.has(id));
@@ -158,13 +158,15 @@ export async function POST(request: NextRequest) {
       select: { id: true }
     });
 
+    const empresaNombre = activeCompanies.find((c) => c.id === primaryDestinoId)?.nombre ?? "Incidencia";
     await sendTicketNotification({
       toUserIds: destinatariosUsers.map((u) => u.id),
       tipo: "ticket_creado",
       ticketId: ticket.id,
       ticketNumero: ticket.numero,
       titulo: ticket.titulo,
-      mensaje: "Se ha creado un nuevo ticket."
+      mensaje: "Se ha creado un nuevo ticket.",
+      empresaNombre
     });
 
     return NextResponse.json({ ticket }, { status: 201 });

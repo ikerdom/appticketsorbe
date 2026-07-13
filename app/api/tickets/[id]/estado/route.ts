@@ -20,7 +20,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const ticket = await prisma.ticket.findUnique({
       where: { id: params.id },
-      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true } } } } }
+      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true, nombre: true } } } } }
     });
     if (!ticket || !puedeVerTicket(user, ticket)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -125,13 +125,15 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     if (ticket.creadorId !== user.id) recipients.add(ticket.creadorId);
     if (updated.asignadoId && updated.asignadoId !== user.id) recipients.add(updated.asignadoId);
 
+    const empresaNombre = ticket.destinos.find((destino) => !destino.empresa.isGlobalTarget)?.empresa.nombre ?? "Incidencia";
     sendTicketNotification({
       toUserIds: Array.from(recipients),
       tipo: "estado_cambiado",
       ticketId: updated.id,
       ticketNumero: updated.numero,
       titulo: updated.titulo,
-      mensaje: `El estado del ticket ha cambiado a ${updated.estado.replace("_", " ")}.`
+      mensaje: `El estado del ticket ha cambiado a ${updated.estado.replace("_", " ")}.`,
+      empresaNombre
     }).catch((err) => console.error("[notify]", err));
 
     return NextResponse.json({ ticket: updated });

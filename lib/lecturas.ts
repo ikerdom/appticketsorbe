@@ -32,11 +32,12 @@ export async function ticketUnreadMap(ticketIds: string[], user: { id: string; r
   ]);
 
   const lecturaMap = new Map(lecturas.map((l) => [l.ticketId, l.ultimaVisita]));
+  const comentarioMap = new Map(ultimosComentarios.map((c) => [c.ticketId, c._max.createdAt]));
   const result: Record<string, boolean> = {};
 
   for (const t of ticketIds) {
     const lastRead = lecturaMap.get(t);
-    const lastComment = ultimosComentarios.find((c) => c.ticketId === t)?._max.createdAt;
+    const lastComment = comentarioMap.get(t);
     result[t] = !!lastComment && (!lastRead || lastComment > lastRead);
   }
 

@@ -42,7 +42,10 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const user = await requireCurrentUser();
-    const ticket = await prisma.ticket.findUnique({ where: { id: params.id }, include: { destinos: true } });
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: params.id },
+      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true, nombre: true } } } } }
+    });
     if (!ticket) {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 });
     }
@@ -105,14 +108,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     if (updated.asignadoId && updated.asignadoId !== prevAsignadoId) {
-      const assignedUser = await prisma.user.findUnique({ where: { id: updated.asignadoId }, select: { id: true } });
+      // updated.asignadoId ya es el id que necesitamos — sin findUnique de más solo para confirmarlo
+      const empresaNombre = ticket.destinos.find((destino) => !destino.empresa.isGlobalTarget)?.empresa.nombre ?? "Incidencia";
       await sendTicketNotification({
-        toUserIds: [assignedUser?.id],
+        toUserIds: [updated.asignadoId],
         tipo: "asignado",
         ticketId: updated.id,
         ticketNumero: updated.numero,
         titulo: updated.titulo,
-        mensaje: "Se te ha asignado este ticket."
+        mensaje: "Se te ha asignado este ticket.",
+        empresaNombre
       });
       await logTicketAction({
         ticketId: updated.id,

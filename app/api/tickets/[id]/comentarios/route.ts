@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const user = await requireCurrentUser();
     const ticket = await prisma.ticket.findUnique({
       where: { id: params.id },
-      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true } } } } }
+      include: { destinos: { include: { empresa: { select: { isGlobalTarget: true, nombre: true } } } } }
     });
     if (!ticket || !puedeVerTicket(user, ticket)) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -39,22 +39,22 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       detalle: { comentarioId: comentario.id }
     });
 
-    const [creador, asignado, participantes] = await Promise.all([
-      prisma.user.findUnique({ where: { id: ticket.creadorId }, select: { id: true } }),
-      ticket.asignadoId ? prisma.user.findUnique({ where: { id: ticket.asignadoId }, select: { id: true } }) : Promise.resolve(null),
-      prisma.comentario.findMany({ where: { ticketId: ticket.id }, select: { autorId: true } })
-    ]);
+    // creadorId/asignadoId ya son el id que necesitamos — no hace falta
+    // volver a consultar User solo para confirmar que existen.
+    const participantes = await prisma.comentario.findMany({ where: { ticketId: ticket.id }, select: { autorId: true } });
     const recipients = Array.from(
-      new Set([creador?.id, asignado?.id, ...participantes.map((item) => item.autorId)].filter((id): id is string => Boolean(id && id !== user.id)))
+      new Set([ticket.creadorId, ticket.asignadoId, ...participantes.map((item) => item.autorId)].filter((id): id is string => Boolean(id && id !== user.id)))
     );
 
+    const empresaNombre = ticket.destinos.find((destino) => !destino.empresa.isGlobalTarget)?.empresa.nombre ?? "Incidencia";
     await sendTicketNotification({
       toUserIds: recipients,
       tipo: "comentario_nuevo",
       ticketId: ticket.id,
       ticketNumero: ticket.numero,
       titulo: ticket.titulo,
-      mensaje: "Se ha añadido un nuevo comentario al ticket."
+      mensaje: "Se ha añadido un nuevo comentario al ticket.",
+      empresaNombre
     });
 
     return NextResponse.json({ comentario }, { status: 201 });

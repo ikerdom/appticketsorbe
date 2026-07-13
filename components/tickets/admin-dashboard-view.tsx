@@ -1,12 +1,29 @@
 "use client";
 
 import Link from "next/link";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import dynamic from "next/dynamic";
 import { AlertCircle, BarChart3, BookOpen, Clock3, Download, Layers3, Timer, Zap, ShieldCheck, ShieldAlert } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDateTimeEs } from "@/lib/dates";
 import { formatHoras } from "@/lib/ticket-timing";
+
+// recharts pesa ~100kB — se carga solo en cliente y después del contenido
+// principal, para que el dashboard no espere a descargarlo para pintar.
+const AdminCharts = dynamic(() => import("@/components/tickets/admin-charts").then((m) => m.AdminCharts), {
+  ssr: false,
+  loading: () => (
+    <div className="space-y-4">
+      {[0, 1].map((i) => (
+        <div key={i} className="grid gap-4 lg:grid-cols-2">
+          <div className="h-72 animate-pulse rounded-2xl border bg-slate-100" />
+          <div className="h-72 animate-pulse rounded-2xl border bg-slate-100" />
+        </div>
+      ))}
+      <div className="h-64 animate-pulse rounded-2xl border bg-slate-100" />
+    </div>
+  )
+});
 
 interface MetricData {
   estado: { ABIERTO: number; EN_CURSO: number; RESUELTO: number };
@@ -39,16 +56,6 @@ interface MetricData {
   };
 }
 
-const PRIORIDAD_COLORS: Record<string, string> = {
-  CRITICA: "#dc2626",
-  ALTA: "#f97316",
-  MEDIA: "#f59e0b",
-  BAJA: "#64748b"
-};
-
-function EmptyChart({ message }: { message: string }) {
-  return <p className="flex h-full items-center justify-center text-sm text-muted-foreground">{message}</p>;
-}
 
 export function AdminDashboardView({ data }: { data: MetricData }) {
   return (
@@ -121,87 +128,15 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Tickets por empresa origen</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            {data.origen.length === 0 ? (
-              <EmptyChart message="Aún no hay tickets en este periodo." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.origen}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nombre" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#2563eb" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Tickets por empresa afectada</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            {data.destino.length === 0 ? (
-              <EmptyChart message="Aún no hay tickets en este periodo." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.destino}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="nombre" />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="total" fill="#16a34a" />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Distribución por prioridad</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            {data.prioridad.length === 0 ? (
-              <EmptyChart message="Aún no hay tickets en este periodo." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={data.prioridad} dataKey="total" nameKey="prioridad" cx="50%" cy="50%" outerRadius={90} label>
-                    {data.prioridad.map((item) => (
-                      <Cell key={item.prioridad} fill={PRIORIDAD_COLORS[item.prioridad] || "#64748b"} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="rounded-2xl">
-          <CardHeader><CardTitle>Evolución temporal ({data.range} días) · creados vs resueltos</CardTitle></CardHeader>
-          <CardContent className="h-72">
-            {data.trend.length === 0 ? (
-              <EmptyChart message="Aún no hay tickets en este periodo." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.trend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="fecha" tick={{ fontSize: 11 }} />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Legend />
-                  <Area dataKey="creados" name="Creados" stroke="#6366f1" fill="#e0e7ff" strokeWidth={2} />
-                  <Area dataKey="resueltos" name="Resueltos" stroke="#10b981" fill="#d1fae5" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <AdminCharts
+        origen={data.origen}
+        destino={data.destino}
+        prioridad={data.prioridad}
+        trend={data.trend}
+        avgPorEmpresa={data.avgPorEmpresa}
+        avgGlobalHoras={data.avgGlobalHoras}
+        range={data.range}
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="rounded-2xl">
@@ -221,32 +156,6 @@ export function AdminDashboardView({ data }: { data: MetricData }) {
                   </div>
                 </div>
               ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl">
-          <CardHeader>
-            <CardTitle>Tiempo medio de resolución por empresa (h)</CardTitle>
-            <p className="text-xs text-muted-foreground">Global: {data.avgGlobalHoras.toFixed(1)}h · Referencia SLA: 72h</p>
-          </CardHeader>
-          <CardContent className="h-64">
-            {data.avgPorEmpresa.length === 0 ? (
-              <EmptyChart message="Sin datos de resolución en este periodo." />
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.avgPorEmpresa} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" allowDecimals={false} unit="h" />
-                  <YAxis type="category" dataKey="empresa" width={80} tick={{ fontSize: 12 }} />
-                  <Tooltip formatter={(v) => [`${Number(v).toFixed(1)}h`, "Resolución media"]} />
-                  <Bar dataKey="horas" name="Horas" radius={[0, 4, 4, 0]}>
-                    {data.avgPorEmpresa.map((item) => (
-                      <Cell key={item.empresa} fill={item.horas > 72 ? "#dc2626" : item.horas > 48 ? "#f97316" : "#16a34a"} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
