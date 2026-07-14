@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { ESTADO_LABELS, ESTADO_COLOR, PRIORIDAD_LABELS, PRIORIDAD_COLOR } from "@/lib/constants";
 import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
+import { PublicTicketGallery } from "@/components/tickets/public-ticket-gallery";
 
 interface Props {
   params: { id: string };
@@ -41,6 +42,10 @@ export default async function PublicTicketPage({ params }: Props) {
           createdAt: true,
           autor: { select: { nombre: true, name: true } }
         },
+        orderBy: { createdAt: "asc" }
+      },
+      adjuntos: {
+        select: { id: true, nombre: true, url: true, tipo: true },
         orderBy: { createdAt: "asc" }
       }
     }
@@ -110,6 +115,9 @@ export default async function PublicTicketPage({ params }: Props) {
           <p className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wide">Descripción</p>
           <p className="whitespace-pre-wrap text-sm text-slate-700">{ticket.descripcion}</p>
         </div>
+
+        {/* Capturas adjuntas */}
+        <PublicTicketGallery adjuntos={ticket.adjuntos} />
 
         {/* Fechas */}
         <div className="rounded-xl border bg-white p-4 grid grid-cols-2 gap-4 text-sm">
