@@ -19,9 +19,11 @@ interface RichTextEditorProps {
   autoFocus?: boolean;
   /** Si se pasa, Enter envía (llama a esto) y Shift+Enter hace salto de línea — para composers tipo chat. */
   onEnterSubmit?: () => void;
+  /** id del wrapper — para scrollIntoView()/focus() desde fuera (p.ej. saltar a un error de validación). */
+  id?: string;
 }
 
-export function RichTextEditor({ content, onChange, onImagePaste, placeholder, minHeight = "160px", autoFocus, onEnterSubmit }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, onImagePaste, placeholder, minHeight = "160px", autoFocus, onEnterSubmit, id }: RichTextEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
@@ -124,7 +126,7 @@ export function RichTextEditor({ content, onChange, onImagePaste, placeholder, m
   }, [content]);
 
   return (
-    <div className="rounded-xl border bg-white focus-within:ring-2 focus-within:ring-indigo-400 transition" style={{ minHeight }}>
+    <div id={id} className="rounded-xl border bg-white focus-within:ring-2 focus-within:ring-indigo-400 transition" style={{ minHeight }}>
       <EditorContent editor={editor} className="px-3 py-2" />
       <div className="flex items-center gap-2 border-t px-3 py-1.5">
         <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />

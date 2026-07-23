@@ -204,8 +204,28 @@ de ticket ya tienen `ticketId` real desde el principio, son mucho más simples.
 | [R5](#r5--comentarios-primero) | Comentarios: editor + paste inline | 1h | `ticket-detail-view.tsx` | ✅ Hecho y verificado en navegador real |
 | [R6](#r6--edición-de-ticket-existente) | Edición de descripción de ticket existente | 45 min | `ticket-detail-view.tsx` | ✅ Hecho y verificado |
 | [R7](#r7--vista-de-solo-lectura) | Sustituir renderizado plano por `<RichContent>` | 30 min | `ticket-detail-view.tsx`, vista pública | ✅ Hecho — incluye galería plana filtrando huérfanas (`extractReferencedAdjuntoIds`) |
-| [R8](#r8--creación-de-ticket-lo-difícil) | Creación de ticket — imágenes pendientes | 2h | `new-ticket-form.tsx` | ❌ Pendiente — sigue con `<Textarea>` plano |
-| [R9](#r9--quality-gate) | Ajustar el gate de 100 caracteres (contar solo texto) | 15 min | `new-ticket-form.tsx` | ❌ Pendiente (depende de R8) |
+| [R8](#r8--creación-de-ticket-lo-difícil) | Creación de ticket — imágenes pendientes | 2h | `new-ticket-form.tsx` | ✅ Hecho — pero NO como describía el plan (ver nota abajo) |
+| [R9](#r9--quality-gate) | Ajustar el gate de 100 caracteres (contar solo texto) | 15 min | `new-ticket-form.tsx` | ✅ Hecho — `stripHtml()` en cliente y servidor |
+
+**Nota sobre R8 en la práctica — más simple que lo planeado:** en vez del
+blob temporal + reemplazo por regex que describía este plan, se optó por
+permitir que `Adjunto.ticketId` sea opcional (migración
+`20260723_adjunto_ticketid_opcional`). Al pegar una imagen durante la
+creación, se sube de inmediato a `POST /api/adjuntos` (sin ticket) y queda
+"huérfana" — se referencia inline con su URL FINAL desde el primer
+momento (`/api/adjuntos/{id}`, servido por `GET /api/adjuntos/[adjuntoId]`
+con permiso: huérfano → cualquier autenticado, asociado → `puedeVerTicket`).
+Al crear el ticket, el servidor busca en la descripción qué adjuntos
+huérfanos se referenciaron (`extractReferencedAdjuntoIds`, mismo regex que
+ya detecta `/adjuntos/{id}` sin importar el prefijo) y los asocia con un
+`updateMany`. Cero blob:, cero reemplazo de HTML por regex — más simple y
+más robusto que el diseño original.
+
+**Bug encontrado y arreglado durante la implementación (ver BUGS.md B011):**
+`lib/sanitize-html.ts` no tenía `/api/adjuntos/` en su `ALLOWED_URI_REGEXP`
+— la imagen se veía bien en el editor pero perdía el `src` al sanitizar en
+servidor antes de guardar. Detectado probando en navegador real antes de
+comitear, no llegó a producción.
 
 **Orden recomendado:** R1 → R2 → R3 → R4 → R5 → R6 → R7 → R9 → R8
 

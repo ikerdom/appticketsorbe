@@ -1,20 +1,27 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
-import { AlertCircle, CheckCircle2, ImagePlus, Info, Lock, Paperclip, UserRound, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, Lock, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { nuevoTicketSchema } from "@/lib/validations";
-import { compressImage } from "@/lib/compress-image";
+import { stripHtml } from "@/lib/rich-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+
+// Tiptap pesa ~130kB — se carga solo en cliente, igual que en ticket-detail-view.tsx
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor").then((m) => m.RichTextEditor), {
+  ssr: false,
+  loading: () => <div className="h-40 animate-pulse rounded-xl border bg-slate-100" />
+});
 
 type FormData = z.infer<typeof nuevoTicketSchema>;
 
@@ -52,70 +59,46 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   const [descError, setDescError] = useState<string | null>(null);
   const [categoriaInput, setCategoriaInput] = useState("");
 
-  // Image attachments — held in memory until ticket is created
-  const [pendingImages, setPendingImages] = useState<{ file: File; preview: string }[]>([]);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // base64 adds ~33% — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
+  const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-  async function addImageFiles(files: File[]): Promise<number> {
-    const imgs = files.filter((f) => f.type.startsWith("image/")).slice(0, 10);
-    if (!imgs.length) return 0;
-    // Comprimir en cliente (capturas de pantalla completa pueden superar 3MB en PNG)
-    const compressed = await Promise.all(imgs.map(compressImage));
-    // base64 adds ~33% — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
-    const tooLarge = compressed.filter((f) => f.size > 3 * 1024 * 1024);
-    if (tooLarge.length) { toast.error(`${tooLarge.length === 1 ? "Una imagen supera" : `${tooLarge.length} imágenes superan`} el límite de 3 MB incluso comprimida`); }
-    const valid = compressed.filter((f) => f.size <= 3 * 1024 * 1024);
-    if (valid.length) {
-      setPendingImages((prev) => [
-        ...prev,
-        ...valid.map((file) => ({ file, preview: URL.createObjectURL(file) }))
-      ]);
+  /**
+   * El ticket todavía no existe — la imagen se sube como adjunto "huérfano"
+   * (sin ticketId) vía /api/adjuntos y queda referenciada inline en el
+   * editor de inmediato. Al crear el ticket, el servidor busca en la
+   * descripción qué adjuntos huérfanos se referenciaron y los asocia.
+   */
+  async function uploadPendingImage(file: File): Promise<string | null> {
+    if (file.size > MAX_IMAGE_BYTES) {
+      toast.error("Imagen demasiado grande (máx 3 MB) incluso comprimida. Recorta la zona relevante.");
+      return null;
     }
-    return valid.length;
-  }
-
-  async function handlePaste(e: React.ClipboardEvent) {
-    const imgs = Array.from(e.clipboardData.items)
-      .filter((i) => i.type.startsWith("image/"))
-      .map((i) => i.getAsFile())
-      .filter(Boolean) as File[];
-    if (!imgs.length) return;
-    e.preventDefault();
-    const added = await addImageFiles(imgs);
-    if (added > 0) toast.success(added === 1 ? "Imagen añadida" : `${added} imágenes añadidas`);
-  }
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    void addImageFiles(files);
-  }
-
-  function removeImage(idx: number) {
-    setPendingImages((prev) => {
-      URL.revokeObjectURL(prev[idx].preview);
-      return prev.filter((_, i) => i !== idx);
-    });
-  }
-
-  async function uploadPendingImages(ticketId: string) {
-    for (const { file } of pendingImages) {
-      await new Promise<void>((resolve) => {
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
-          const dataUrl = ev.target?.result as string;
-          const base64 = dataUrl.split(",")[1];
-          await fetch(`/api/tickets/${ticketId}/adjuntos`, {
+    return new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const dataUrl = ev.target?.result as string;
+        const base64 = dataUrl.split(",")[1];
+        try {
+          const res = await fetch("/api/adjuntos", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ filename: file.name || `imagen-${Date.now()}.png`, tipo: file.type || "image/png", base64 })
-          }).catch(() => null);
-          resolve();
-        };
-        reader.readAsDataURL(file);
-      });
-    }
+          });
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
+            toast.error(body.error ?? "Error al subir imagen");
+            resolve(null);
+            return;
+          }
+          const { adjunto } = await res.json();
+          resolve(`/api/adjuntos/${adjunto.id}`);
+        } catch {
+          toast.error("Error al subir imagen");
+          resolve(null);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
   }
 
   const form = useForm<FormData>({
@@ -137,13 +120,12 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
     }
   });
 
-  const descripcionField = form.register("descripcion");
   const selectedDestinatarios = useWatch({ control: form.control, name: "destinatarios" }) ?? [];
   const selectedPrioridad = useWatch({ control: form.control, name: "prioridad" });
   const descripcion = useWatch({ control: form.control, name: "descripcion" }) ?? "";
 
   const MIN_CARACTERES = 100;
-  const caracteres = descripcion.trim().length;
+  const caracteres = stripHtml(descripcion).length;
   const descripcionOk = caracteres >= MIN_CARACTERES;
 
   const allCategorias = useMemo(() => Array.from(new Set([...BASE_CATEGORIAS, ...categoriasCustom])), [categoriasCustom]);
@@ -168,7 +150,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
   }
 
   const onSubmit = form.handleSubmit((values) => {
-    const chars = values.descripcion.trim().length;
+    const chars = stripHtml(values.descripcion).length;
     if (chars < MIN_CARACTERES) {
       setDescError(
         `Necesitamos más detalle para poder ayudarte (${chars}/${MIN_CARACTERES} caracteres). ` +
@@ -176,7 +158,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
         "Adjunta también una captura de pantalla con Ctrl+V."
       );
       document.getElementById("descripcion")?.scrollIntoView({ behavior: "smooth", block: "center" });
-      document.getElementById("descripcion")?.focus();
+      document.querySelector<HTMLElement>('#descripcion [contenteditable="true"]')?.focus();
       return;
     }
     setDescError(null);
@@ -209,11 +191,6 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
       }
 
       const { ticket } = await response.json();
-
-      // Upload pending images (non-blocking — ticket already created)
-      if (pendingImages.length > 0) {
-        await uploadPendingImages(ticket.id);
-      }
 
       toast.success("Ticket creado correctamente");
       router.push(`/tickets/${ticket.id}`);
@@ -296,27 +273,17 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
               </p>
             </div>
 
-            <div
-              className={`relative rounded-xl transition ${dragOver ? "ring-2 ring-indigo-400 ring-offset-1" : ""}`}
-              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-              onDragLeave={() => setDragOver(false)}
-              onDrop={(e) => { e.preventDefault(); setDragOver(false); addImageFiles(Array.from(e.dataTransfer.files)); }}
-            >
-              <Textarea
-                id="descripcion"
-                rows={8}
-                {...descripcionField}
-                className={`min-h-[160px] ${dragOver ? "border-indigo-400" : ""} ${descError ? "border-red-400 focus-visible:ring-red-400" : ""}`}
-                placeholder={dragOver
-                  ? "Suelta las imágenes aquí…"
-                  : "Describe el problema con detalle:\n\n🔴 Qué falla: ...\n✅ Cómo debería funcionar: ...\n❌ Qué veo exactamente: ..."}
-                onPaste={handlePaste}
-                onChange={(e) => {
-                  descripcionField.onChange(e); // react-hook-form primero — sin esto el form no recibe el texto
-                  if (descError) setDescError(null);
-                }}
-              />
-            </div>
+            <RichTextEditor
+              id="descripcion"
+              content={descripcion}
+              onChange={(html) => {
+                form.setValue("descripcion", html, { shouldValidate: true });
+                if (descError) setDescError(null);
+              }}
+              onImagePaste={uploadPendingImage}
+              placeholder="Describe el problema con detalle: qué falla, cómo debería funcionar y qué ves exactamente..."
+              minHeight="160px"
+            />
 
             {/* Indicador de calidad en tiempo real */}
             <div className="flex items-center justify-between text-xs">
@@ -339,42 +306,6 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
               <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                 <span>{descError}</span>
-              </div>
-            )}
-
-            {/* Image picker */}
-            <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFileSelect} />
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition"
-              >
-                <Paperclip className="h-3.5 w-3.5" />
-                Adjuntar imagen
-              </button>
-              <span className="text-[11px] text-muted-foreground">o Ctrl+V · arrastra sobre la descripción</span>
-            </div>
-
-            {/* Pending image thumbnails */}
-            {pendingImages.length > 0 && (
-              <div className="flex flex-wrap gap-2 pt-1">
-                {pendingImages.map(({ preview }, idx) => (
-                  <div key={idx} className="group relative overflow-hidden rounded-lg border shadow-sm">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={preview} alt={`imagen ${idx + 1}`} className="h-24 w-auto max-w-[180px] object-cover" />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(idx)}
-                      className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-                <div className="flex items-center">
-                  <span className="text-xs text-slate-400">{pendingImages.length} imagen{pendingImages.length !== 1 ? "es" : ""}</span>
-                </div>
               </div>
             )}
           </div>

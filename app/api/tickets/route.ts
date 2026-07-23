@@ -5,6 +5,9 @@ import { filtroSchema, nuevoTicketSchema } from "@/lib/validations";
 import { requireCurrentUser, visibleTicketWhere } from "@/lib/data";
 import { sendTicketNotification } from "@/lib/notifications";
 import { ticketUnreadMap } from "@/lib/lecturas";
+import { sanitizeRichText } from "@/lib/sanitize-html";
+import { extractReferencedAdjuntoIds, stripHtml } from "@/lib/rich-content";
+import { associarAdjuntosHuerfanos } from "@/lib/adjuntos-huerfanos";
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,6 +91,16 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const data = nuevoTicketSchema.parse(body);
 
+    const descripcion = sanitizeRichText(data.descripcion);
+    // Mismo mínimo de 100 caracteres que exige el cliente (new-ticket-form.tsx) —
+    // reforzado en servidor para que nadie se lo salte llamando a la API directo.
+    if (stripHtml(descripcion).length < 100) {
+      return NextResponse.json(
+        { error: "La descripción necesita al menos 100 caracteres de texto (sin contar imágenes)." },
+        { status: 400 }
+      );
+    }
+
     const activeCompanies = await prisma.empresa.findMany({
       where: { isActive: true, isGlobalTarget: false, deletedAt: null },
       select: { id: true, nombre: true }
@@ -104,7 +117,7 @@ export async function POST(request: NextRequest) {
       const created = await tx.ticket.create({
         data: {
           titulo: data.titulo,
-          descripcion: data.descripcion,
+          descripcion,
           empresaOrigenId: user.empresaId,
           empresaDestinoId: primaryDestinoId,
           personaAfectada: data.personaAfectada?.trim() || null,
@@ -152,6 +165,11 @@ export async function POST(request: NextRequest) {
 
       return created;
     });
+
+    // Adjuntos huérfanos (imágenes pegadas inline en la descripción antes
+    // de que este ticket existiera) — asociarlos ahora que ya tiene id.
+    const adjuntoIds = Array.from(extractReferencedAdjuntoIds([descripcion]));
+    await associarAdjuntosHuerfanos(adjuntoIds, ticket.id, user.id);
 
     const destinatariosUsers = await prisma.user.findMany({
       where: { activo: true, empresaId: { in: uniqueDestinatarios }, id: { not: user.id } },

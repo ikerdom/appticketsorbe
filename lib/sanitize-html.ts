@@ -16,6 +16,6 @@ export function sanitizeRichText(html: string): string {
   return DOMPurify.sanitize(html, {
     ALLOWED_TAGS,
     ALLOWED_ATTR,
-    ALLOWED_URI_REGEXP: /^(?:\/api\/(?:public\/)?tickets\/|blob:|https?:\/\/)/
+    ALLOWED_URI_REGEXP: /^(?:\/api\/(?:public\/)?tickets\/|\/api\/adjuntos\/|blob:|https?:\/\/)/
   });
 }

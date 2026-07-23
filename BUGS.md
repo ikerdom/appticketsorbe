@@ -249,6 +249,35 @@ Quitar el filtro `archivadoAt: null` — el histórico muestra TODOS los resuelt
 
 ---
 
+## B011 — Imagen inline en creación de ticket perdía su `src` al guardar
+
+**Estado:** 🟢 RESUELTO — 2026-07-23 (encontrado en pruebas antes de llegar a producción)
+
+**Severidad:** ALTA
+
+**Descripción:**
+Al implementar R8 (imágenes inline en la creación de ticket, PLAN_EDITOR_RICO.md),
+la imagen se insertaba correctamente en el editor (`<img src="/api/adjuntos/{id}">`)
+pero al guardar el ticket, el `<img>` sobrevivía sin su atributo `src` — la
+imagen quedaba invisible en el ticket ya creado.
+
+**Causa raíz:**
+`lib/sanitize-html.ts` — `ALLOWED_URI_REGEXP` solo permitía `/api/tickets/...`,
+`/api/public/tickets/...`, `blob:` y `http(s)://`. La nueva ruta de adjuntos
+huérfanos (`/api/adjuntos/{id}`, creada para R8) no encajaba en ese patrón —
+DOMPurify, al sanitizar en el servidor antes de guardar, quita cualquier
+atributo cuya URI no matchee el regex (no borra la etiqueta entera, solo el
+atributo `src`), dejando `<img alt="...">` sin fuente.
+
+**Fix aplicado:**
+Añadido `/api/adjuntos/` al regex: `/^(?:\/api\/(?:public\/)?tickets\/|\/api\/adjuntos\/|blob:|https?:\/\/)/`.
+
+**Nota para el futuro:** cualquier nueva ruta que sirva adjuntos debe añadirse
+aquí también — si no, el síntoma es exactamente este: la imagen se ve bien
+mientras se escribe, pero desaparece (sin error visible) en cuanto se guarda.
+
+---
+
 ## Cómo reportar un bug nuevo
 
 Para añadir un bug a este fichero, usar esta plantilla:

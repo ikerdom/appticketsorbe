@@ -321,8 +321,11 @@ model Adjunto {
   url       String
   tipo      String
   tamano    Int
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  // Opcional: durante la creación de un ticket (editor rico, R8) la imagen se
+  // sube antes de que exista el ticket — el adjunto queda "huérfano"
+  // (ticketId null) hasta que el ticket se crea y se asocia.
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
 }
 
