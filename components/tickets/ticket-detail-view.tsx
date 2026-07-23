@@ -3,19 +3,28 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, ImagePlus, Link2, Lock, Mail, Paperclip, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ImagePlus, Link2, Lock, Mail, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
-import { compressImage } from "@/lib/compress-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogActions } from "@/components/ui/dialog";
+import dynamic from "next/dynamic";
+import { RichContent } from "@/components/ui/rich-content";
 import { PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
 import { formatDateTimeEs } from "@/lib/dates";
+import { extractReferencedAdjuntoIds, isRichContentEmpty, stripHtml } from "@/lib/rich-content";
 import type { TicketDetailData } from "@/types/ticket";
 import { TicketLifecycle } from "@/components/tickets/ticket-lifecycle";
+
+// Tiptap pesa ~130kB — se carga solo en cliente, después del contenido
+// principal (descripción/comentarios ya renderizados con RichContent).
+const RichTextEditor = dynamic(() => import("@/components/ui/rich-text-editor").then((m) => m.RichTextEditor), {
+  ssr: false,
+  loading: () => <div className="h-24 animate-pulse rounded-xl border bg-slate-100" />
+});
 
 interface TicketDetailViewProps {
   ticket: TicketDetailData;
@@ -55,10 +64,21 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
   const [adjuntos, setAdjuntos] = useState(ticket.adjuntos);
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
-  const notas_adjuntos_imgs = adjuntos.filter(a => a.tipo.startsWith("image/"));
   const adjuntoSrc = (adjuntoId: string) => `/api/tickets/${ticket.id}/adjuntos/${adjuntoId}`;
-  const lightbox = lightboxIdx !== null && notas_adjuntos_imgs[lightboxIdx]
-    ? { ...notas_adjuntos_imgs[lightboxIdx], idx: lightboxIdx }
+
+  // Imágenes ya referenciadas inline en descripcion/comentarios — la galería
+  // plana de abajo solo muestra las huérfanas (de tickets de antes de este
+  // cambio); para tickets nuevos, con todo inline, esta lista sale vacía.
+  const referencedAdjuntoIds = useMemo(
+    () => extractReferencedAdjuntoIds([ticket.descripcion, ...comentarios.map((c) => c.contenido)]),
+    [ticket.descripcion, comentarios]
+  );
+  const orphanImgs = useMemo(
+    () => adjuntos.filter((a) => a.tipo.startsWith("image/") && !referencedAdjuntoIds.has(a.id)),
+    [adjuntos, referencedAdjuntoIds]
+  );
+  const lightbox = lightboxIdx !== null && orphanImgs[lightboxIdx]
+    ? { ...orphanImgs[lightboxIdx], idx: lightboxIdx }
     : null;
   const [notas, setNotas] = useState(ticket.notas);
   const [nuevaNota, setNuevaNota] = useState("");
@@ -78,7 +98,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
   useEffect(() => {
     if (lightboxIdx === null) return;
-    const total = notas_adjuntos_imgs.length;
+    const total = orphanImgs.length;
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") { setLightboxIdx(null); return; }
       if (e.key === "ArrowRight") setLightboxIdx((i) => (i === null ? null : (i + 1) % total));
@@ -86,10 +106,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [lightboxIdx, notas_adjuntos_imgs.length]);
-  const [uploadingImage, setUploadingImage] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  }, [lightboxIdx, orphanImgs.length]);
   const [editingContact, setEditingContact] = useState(false);
   const [contactForm, setContactForm] = useState({
     contactoNombre: ticket.contactoNombre || "",
@@ -156,7 +173,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   }
 
   function addComment() {
-    if (!comment.trim()) return;
+    if (isRichContentEmpty(comment)) return;
     startTransition(async () => {
       const response = await fetch(`/api/tickets/${ticket.id}/comentarios`, {
         method: "POST",
@@ -164,7 +181,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
         body: JSON.stringify({ contenido: comment })
       });
       if (!response.ok) {
-        toast.error("No se pudo enviar el comentario");
+        const body = await response.json().catch(() => ({ error: "No se pudo enviar el comentario" }));
+        toast.error(body.error ?? "No se pudo enviar el comentario");
         return;
       }
       const { comentario } = await response.json();
@@ -177,14 +195,18 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   // base64 adds ~33% overhead — keep raw file under 3MB so JSON body stays under Vercel's 4.5MB limit
   const MAX_IMAGE_BYTES = 3 * 1024 * 1024;
 
-  async function uploadImageFile(rawFile: File): Promise<boolean> {
-    // Comprimir en cliente — capturas de pantalla completa superan 3MB en PNG
-    const file = await compressImage(rawFile);
+  /**
+   * onImagePaste compartido por el editor de comentarios y el de edición de
+   * descripción — RichTextEditor ya comprime la imagen antes de llamar esto
+   * (paste, drop, y su propio botón "Adjuntar imagen"), aquí solo falta
+   * validar tamaño y subir.
+   */
+  async function uploadInlineImage(file: File): Promise<string | null> {
     if (file.size > MAX_IMAGE_BYTES) {
-      toast.error(`Imagen demasiado grande (máx 3 MB) incluso comprimida. Recorta la zona relevante.`);
-      return false;
+      toast.error("Imagen demasiado grande (máx 3 MB) incluso comprimida. Recorta la zona relevante.");
+      return null;
     }
-    return new Promise<boolean>((resolve) => {
+    return new Promise<string | null>((resolve) => {
       const reader = new FileReader();
       reader.onload = async (ev) => {
         const dataUrl = ev.target?.result as string;
@@ -199,56 +221,19 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           if (res.ok) {
             const { adjuntos: [adj] } = await res.json();
             setAdjuntos((prev) => [...prev, adj]);
-            resolve(true);
+            resolve(adjuntoSrc(adj.id));
           } else {
             const body = await res.json().catch(() => ({ error: "Error al subir imagen" }));
             toast.error(body.error ?? "Error al subir imagen");
-            resolve(false);
+            resolve(null);
           }
         } catch {
           toast.error("Error al subir imagen");
-          resolve(false);
+          resolve(null);
         }
       };
       reader.readAsDataURL(file);
     });
-  }
-
-  async function handleImagePaste(e: React.ClipboardEvent) {
-    const imageFiles = Array.from(e.clipboardData.items)
-      .filter((i) => i.type.startsWith("image/"))
-      .map((i) => i.getAsFile())
-      .filter(Boolean) as File[];
-    if (!imageFiles.length) return;
-    e.preventDefault();
-    setUploadingImage(true);
-    let ok = 0;
-    for (const file of imageFiles) { if (await uploadImageFile(file)) ok++; }
-    setUploadingImage(false);
-    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
-  }
-
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
-    setUploadingImage(true);
-    let ok = 0;
-    for (const file of files) { if (await uploadImageFile(file)) ok++; }
-    setUploadingImage(false);
-    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
-    e.target.value = "";
-  }
-
-  async function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    setDragOver(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
-    if (!files.length) return;
-    setUploadingImage(true);
-    let ok = 0;
-    for (const file of files) { if (await uploadImageFile(file)) ok++; }
-    setUploadingImage(false);
-    if (ok > 0) toast.success(ok === 1 ? "Imagen adjuntada" : `${ok} imágenes adjuntadas`);
   }
 
   // Dialog genérico de confirmación — sustituye a window.confirm (B003)
@@ -496,12 +481,12 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
             <CardContent>
               {editingTicket ? (
                 <div className="space-y-3">
-                  <Textarea
-                    value={editForm.descripcion}
-                    onChange={(e) => setEditForm(prev => ({ ...prev, descripcion: e.target.value }))}
-                    rows={6}
-                    className="text-sm"
+                  <RichTextEditor
+                    content={editForm.descripcion}
+                    onChange={(html) => setEditForm(prev => ({ ...prev, descripcion: html }))}
+                    onImagePaste={uploadInlineImage}
                     placeholder="Descripción del ticket..."
+                    minHeight="140px"
                   />
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -543,10 +528,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 </div>
               ) : (
                 <div>
-                  <p className={`whitespace-pre-wrap text-sm leading-relaxed ${!descExpanded ? "line-clamp-6" : ""}`}>
-                    {ticket.descripcion}
-                  </p>
-                  {ticket.descripcion.length > LONG_DESC && (
+                  <RichContent html={ticket.descripcion} className={!descExpanded ? "line-clamp-6" : ""} />
+                  {stripHtml(ticket.descripcion).length > LONG_DESC && (
                     <button
                       type="button"
                       onClick={() => setDescExpanded((v) => !v)}
@@ -578,7 +561,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                         {!isOwn && (
                           <p className="mb-1 text-xs font-semibold text-indigo-700">{autorName}</p>
                         )}
-                        <p className="whitespace-pre-wrap leading-relaxed">{item.contenido}</p>
+                        <RichContent html={item.contenido} compact className={isOwn ? "prose-invert" : ""} />
                       </div>
                       <span className="mt-0.5 px-1 text-[10px] text-muted-foreground">{formatDateTimeEs(item.createdAt)}</span>
                     </div>
@@ -587,13 +570,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               </div>
 
               {/* Image gallery */}
-              {notas_adjuntos_imgs.length > 0 && (
+              {orphanImgs.length > 0 && (
                 <div className="border-t pt-3 space-y-2">
                   <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide">
-                    {notas_adjuntos_imgs.length} captura{notas_adjuntos_imgs.length > 1 ? "s" : ""} · clic para ampliar
+                    {orphanImgs.length} captura{orphanImgs.length > 1 ? "s" : ""} · clic para ampliar
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {notas_adjuntos_imgs.map((adj, idx) => (
+                    {orphanImgs.map((adj, idx) => (
                       <button
                         key={adj.id}
                         type="button"
@@ -619,50 +602,20 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               )}
 
               {/* Composer */}
-              <div
-                className={`space-y-2 border-t pt-3 ${dragOver ? "rounded-xl ring-2 ring-indigo-400 ring-offset-1" : ""}`}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-              >
-                <Textarea
-                  value={comment}
-                  onChange={(event) => setComment(event.target.value)}
-                  placeholder={dragOver ? "Suelta la imagen aquí…" : "Escribe un mensaje…"}
-                  rows={3}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      addComment();
-                    }
-                  }}
-                  onPaste={handleImagePaste}
-                  className={dragOver ? "border-indigo-400" : ""}
+              <div className="space-y-2 border-t pt-3">
+                <RichTextEditor
+                  content={comment}
+                  onChange={setComment}
+                  onImagePaste={uploadInlineImage}
+                  placeholder="Escribe un mensaje…"
+                  minHeight="90px"
+                  onEnterSubmit={addComment}
                 />
-                <div className="flex items-center gap-2">
-                  {/* Hidden file input */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileSelect}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploadingImage}
-                    className="inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 hover:text-slate-700 transition disabled:opacity-50"
-                    title="Adjuntar imagen"
-                  >
-                    <Paperclip className="h-3.5 w-3.5" />
-                    {uploadingImage ? "Subiendo…" : "Imagen"}
-                  </button>
-                  <span className="flex-1 text-[11px] text-muted-foreground">
-                    Ctrl+V · arrastra · o haz clic en Imagen
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[11px] text-muted-foreground">
+                    Enter envía · Shift+Enter salto de línea
                   </span>
-                  <Button onClick={addComment} disabled={isPending || !comment.trim()}>
+                  <Button onClick={addComment} disabled={isPending || isRichContentEmpty(comment)}>
                     {isPending ? "Enviando..." : "Enviar"}
                   </Button>
                 </div>
@@ -979,13 +932,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           </button>
 
           {/* Prev / Next */}
-          {notas_adjuntos_imgs.length > 1 && (
+          {orphanImgs.length > 1 && (
             <>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setLightboxIdx((lightbox.idx - 1 + notas_adjuntos_imgs.length) % notas_adjuntos_imgs.length);
+                  setLightboxIdx((lightbox.idx - 1 + orphanImgs.length) % orphanImgs.length);
                 }}
                 className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
               >‹</button>
@@ -993,7 +946,7 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setLightboxIdx((lightbox.idx + 1) % notas_adjuntos_imgs.length);
+                  setLightboxIdx((lightbox.idx + 1) % orphanImgs.length);
                 }}
                 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
               >›</button>
@@ -1017,8 +970,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
 
             <div className="flex items-center gap-3 rounded-xl bg-white/10 px-4 py-2">
               <span className="max-w-[220px] truncate text-sm text-white/80">{lightbox.nombre}</span>
-              {notas_adjuntos_imgs.length > 1 && (
-                <span className="shrink-0 text-xs text-white/40">{lightbox.idx + 1} / {notas_adjuntos_imgs.length}</span>
+              {orphanImgs.length > 1 && (
+                <span className="shrink-0 text-xs text-white/40">{lightbox.idx + 1} / {orphanImgs.length}</span>
               )}
               <a
                 href={adjuntoSrc(lightbox.id)}

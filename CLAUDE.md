@@ -190,7 +190,7 @@ NOTIFICATIONS_ENABLED=true
 | Notificaciones in-app | ✅ Funciona |
 | Historial/auditoría | ✅ Funciona |
 | Upload imágenes (clipboard) | ✅ Prod OK · compresión cliente en `lib/compress-image.ts` (B009) · imágenes servidas a demanda vía `lib/adjunto-serve.ts`, no como base64 embebido |
-| Imágenes inline en el texto (estilo Jira) | 🟡 Investigado y diseñado, sin implementar (PLAN_EDITOR_RICO.md) |
+| Imágenes inline en el texto (estilo Jira) | ✅ Comentarios y edición de descripción (Tiptap, R1-R7) · pendiente creación de ticket (R8-R9, PLAN_EDITOR_RICO.md) |
 | Upload PDFs y archivos | ⚪ No implementado (decisión deliberada) |
 | Vista pública sin login | ✅ `/public/tickets/[id]` y `/public/tickets/t/[numero]` |
 | Estadísticas dashboard | ✅ Stat cards + alerta críticos + barra progreso por empresa |

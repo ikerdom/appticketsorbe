@@ -6,6 +6,8 @@ import { requireCurrentUser } from "@/lib/data";
 import { sendTicketNotification } from "@/lib/notifications";
 import { logTicketAction } from "@/lib/audit";
 import { markTicketRead } from "@/lib/lecturas";
+import { sanitizeRichText } from "@/lib/sanitize-html";
+import { isRichContentEmpty } from "@/lib/rich-content";
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -19,10 +21,14 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const data = comentarioSchema.parse(await request.json());
+    const contenido = sanitizeRichText(data.contenido);
+    if (isRichContentEmpty(contenido)) {
+      return NextResponse.json({ error: "El comentario no puede estar vacío" }, { status: 400 });
+    }
 
     const comentario = await prisma.comentario.create({
       data: {
-        contenido: data.contenido,
+        contenido,
         ticketId: ticket.id,
         autorId: user.id
       },

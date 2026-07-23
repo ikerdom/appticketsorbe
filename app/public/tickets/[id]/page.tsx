@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { ESTADO_LABELS, ESTADO_COLOR, PRIORIDAD_LABELS, PRIORIDAD_COLOR } from "@/lib/constants";
 import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
 import { PublicTicketGallery } from "@/components/tickets/public-ticket-gallery";
+import { RichContent } from "@/components/ui/rich-content";
+import { extractReferencedAdjuntoIds } from "@/lib/rich-content";
 
 interface Props {
   params: { id: string };
@@ -63,6 +65,12 @@ export default async function PublicTicketPage({ params }: Props) {
   const estadoColor = ESTADO_COLOR[ticket.estado];
   const prioridadColor = PRIORIDAD_COLOR[ticket.prioridad];
 
+  // Igual que en la vista autenticada: la galería plana solo enseña
+  // imágenes huérfanas (de antes del editor rico) — las inline ya se ven
+  // en su sitio dentro de descripción/comentarios.
+  const referencedAdjuntoIds = extractReferencedAdjuntoIds([ticket.descripcion, ...ticket.comentarios.map((c) => c.contenido)]);
+  const orphanAdjuntos = ticket.adjuntos.filter((a) => !referencedAdjuntoIds.has(a.id));
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header mínimo */}
@@ -115,11 +123,11 @@ export default async function PublicTicketPage({ params }: Props) {
         {/* Descripción */}
         <div className="rounded-xl border bg-white p-4">
           <p className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wide">Descripción</p>
-          <p className="whitespace-pre-wrap text-sm text-slate-700">{ticket.descripcion}</p>
+          <RichContent html={ticket.descripcion} />
         </div>
 
-        {/* Capturas adjuntas */}
-        <PublicTicketGallery ticketId={params.id} adjuntos={ticket.adjuntos} />
+        {/* Capturas adjuntas — solo huérfanas, las inline ya se ven en el texto */}
+        <PublicTicketGallery ticketId={params.id} adjuntos={orphanAdjuntos} />
 
         {/* Fechas */}
         <div className="rounded-xl border bg-white p-4 grid grid-cols-2 gap-4 text-sm">
@@ -153,7 +161,7 @@ export default async function PublicTicketPage({ params }: Props) {
                   </span>
                   <span className="text-xs text-slate-400">{formatRelativeEs(c.createdAt)}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-slate-600">{c.contenido}</p>
+                <RichContent html={c.contenido} compact className="text-slate-600" />
               </div>
             ))}
           </div>

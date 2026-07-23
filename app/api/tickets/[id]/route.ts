@@ -5,6 +5,7 @@ import { puedeEditarTicket, puedeEliminarTicket, puedeVerTicket } from "@/lib/pe
 import { requireCurrentUser } from "@/lib/data";
 import { logTicketAction } from "@/lib/audit";
 import { sendTicketNotification } from "@/lib/notifications";
+import { sanitizeRichText } from "@/lib/sanitize-html";
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -57,6 +58,8 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     // Edición simultánea permitida — sin hard-lock (solo informativo)
     const body = await request.json();
     const data = editarTicketSchema.parse(body);
+    // sanitizeRichText es idempotente sobre texto plano legacy (sin tags que quitar)
+    const descripcionSaneada = data.descripcion !== undefined ? sanitizeRichText(data.descripcion) : undefined;
 
     const prevAsignadoId = ticket.asignadoId;
 
@@ -65,7 +68,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         where: { id: params.id },
         data: {
           titulo: data.titulo,
-          descripcion: data.descripcion,
+          descripcion: descripcionSaneada,
           personaAfectada: data.personaAfectada,
           contactoNombre: data.contactoNombre,
           contactoTelefono: data.contactoTelefono,

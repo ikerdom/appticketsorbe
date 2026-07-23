@@ -195,19 +195,27 @@ de ticket ya tienen `ticketId` real desde el principio, son mucho más simples.
 
 ## Resumen de cambios
 
-| ID | Cambio | Esfuerzo | Dónde |
-|----|--------|----------|-------|
-| [R1](#r1--instalar-tiptap) | Instalar Tiptap + extensiones | 10 min | `package.json` |
-| [R2](#r2--sanitizado-html) | `lib/sanitize-html.ts` + `lib/rich-content.ts` | 30 min | nuevo |
-| [R3](#r3--componente-editor-reutilizable) | Componente `<RichTextEditor>` | 1h30 | nuevo |
-| [R4](#r4--componente-de-solo-lectura) | Componente `<RichContent>` (solo lectura) | 30 min | nuevo |
-| [R5](#r5--comentarios-primero) | Comentarios: editor + paste inline | 1h | `ticket-detail-view.tsx` |
-| [R6](#r6--edición-de-ticket-existente) | Edición de descripción de ticket existente | 45 min | `ticket-detail-view.tsx` |
-| [R7](#r7--vista-de-solo-lectura) | Sustituir renderizado plano por `<RichContent>` | 30 min | `ticket-detail-view.tsx`, vista pública |
-| [R8](#r8--creación-de-ticket-lo-difícil) | Creación de ticket — imágenes pendientes | 2h | `new-ticket-form.tsx` |
-| [R9](#r9--quality-gate) | Ajustar el gate de 100 caracteres (contar solo texto) | 15 min | `new-ticket-form.tsx` |
+| ID | Cambio | Esfuerzo | Dónde | Estado |
+|----|--------|----------|-------|--------|
+| [R1](#r1--instalar-tiptap) | Instalar Tiptap + extensiones | 10 min | `package.json` | ✅ Hecho |
+| [R2](#r2--sanitizado-html) | `lib/sanitize-html.ts` + `lib/rich-content.ts` | 30 min | nuevo | ✅ Hecho |
+| [R3](#r3--componente-editor-reutilizable) | Componente `<RichTextEditor>` | 1h30 | nuevo | ✅ Hecho — cargado vía `next/dynamic` (Tiptap pesa ~130kB, igual que se hizo con recharts en el dashboard) |
+| [R4](#r4--componente-de-solo-lectura) | Componente `<RichContent>` (solo lectura) | 30 min | nuevo | ✅ Hecho |
+| [R5](#r5--comentarios-primero) | Comentarios: editor + paste inline | 1h | `ticket-detail-view.tsx` | ✅ Hecho y verificado en navegador real |
+| [R6](#r6--edición-de-ticket-existente) | Edición de descripción de ticket existente | 45 min | `ticket-detail-view.tsx` | ✅ Hecho y verificado |
+| [R7](#r7--vista-de-solo-lectura) | Sustituir renderizado plano por `<RichContent>` | 30 min | `ticket-detail-view.tsx`, vista pública | ✅ Hecho — incluye galería plana filtrando huérfanas (`extractReferencedAdjuntoIds`) |
+| [R8](#r8--creación-de-ticket-lo-difícil) | Creación de ticket — imágenes pendientes | 2h | `new-ticket-form.tsx` | ❌ Pendiente — sigue con `<Textarea>` plano |
+| [R9](#r9--quality-gate) | Ajustar el gate de 100 caracteres (contar solo texto) | 15 min | `new-ticket-form.tsx` | ❌ Pendiente (depende de R8) |
 
 **Orden recomendado:** R1 → R2 → R3 → R4 → R5 → R6 → R7 → R9 → R8
+
+**Nota sobre R3 en la práctica:** el botón "Adjuntar imagen" (input de archivo) se
+metió DENTRO del propio `RichTextEditor` en vez de exponerlo por `ref` —
+así el componente no necesita `forwardRef`, lo que simplifica usarlo con
+`next/dynamic` (los tipos de `dynamic()` + `forwardRef` + `ssr:false` no son
+triviales de encajar). Sin este cambio, cargar Tiptap sin diferir hacía que
+`/tickets/[id]` pasara de 129kB a 266kB de First Load JS — con `next/dynamic`
+quedó en 140kB.
 
 (R8 al final a propósito — es el más arriesgado, y para entonces ya se habrá
 probado el editor en comentarios y edición sin el problema del ticket
