@@ -17,6 +17,7 @@ Antes de tocar código, lee siempre estos documentos en este orden:
 | [PLAN_MEJORAS.md](./PLAN_MEJORAS.md) | Mejoras planificadas con código exacto | Cuando vayas a implementar una feature |
 | [PLAN_PROPUESTAS.md](./PLAN_PROPUESTAS.md) | Plan módulo Propuestas de Mejora | Cuando trabajes en el módulo de propuestas |
 | [PLAN_BLOQUEADOS.md](./PLAN_BLOQUEADOS.md) | Estado BLOQUEADO + nota obligatoria al resolver | Cuando implementes bloqueos de tickets |
+| [PLAN_EDITOR_RICO.md](./PLAN_EDITOR_RICO.md) | Editor rico con imágenes inline (estilo Jira) — investigado, sin implementar | Cuando implementes el editor de texto enriquecido |
 | [README.md](./README.md) | Setup inicial, deploy, comandos | Para arrancar el proyecto |
 
 ---
@@ -188,7 +189,8 @@ NOTIFICATIONS_ENABLED=true
 | Notas internas admin | ✅ Funciona |
 | Notificaciones in-app | ✅ Funciona |
 | Historial/auditoría | ✅ Funciona |
-| Upload imágenes (clipboard) | ✅ Prod OK · compresión cliente en `lib/compress-image.ts` (B009) |
+| Upload imágenes (clipboard) | ✅ Prod OK · compresión cliente en `lib/compress-image.ts` (B009) · imágenes servidas a demanda vía `lib/adjunto-serve.ts`, no como base64 embebido |
+| Imágenes inline en el texto (estilo Jira) | 🟡 Investigado y diseñado, sin implementar (PLAN_EDITOR_RICO.md) |
 | Upload PDFs y archivos | ⚪ No implementado (decisión deliberada) |
 | Vista pública sin login | ✅ `/public/tickets/[id]` y `/public/tickets/t/[numero]` |
 | Estadísticas dashboard | ✅ Stat cards + alerta críticos + barra progreso por empresa |
