@@ -12,7 +12,9 @@ function isStaticPath(pathname: string) {
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/icon") ||
     pathname.startsWith("/manifest") ||
-    pathname.startsWith("/public")
+    pathname.startsWith("/public") ||
+    // API que sirve datos/imágenes de la vista pública sin login (ticket compartido)
+    pathname.startsWith("/api/public")
   );
 }
 

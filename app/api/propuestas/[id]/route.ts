@@ -56,7 +56,13 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     const propuesta = await prisma.propuesta.findUnique({ where: { id: params.id } });
     if (!propuesta) return NextResponse.json({ error: "No encontrada" }, { status: 404 });
 
-    if (user.rol !== "ADMIN") return NextResponse.json({ error: "Solo administradores pueden eliminar" }, { status: 403 });
+    const esAutor = propuesta.userId === user.id;
+    if (user.rol !== "ADMIN") {
+      if (!esAutor) return NextResponse.json({ error: "Solo puedes retirar tus propias propuestas" }, { status: 403 });
+      if (propuesta.estado !== "PENDIENTE") {
+        return NextResponse.json({ error: "Ya está siendo revisada — solo se pueden retirar propuestas pendientes" }, { status: 403 });
+      }
+    }
 
     await prisma.propuesta.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });

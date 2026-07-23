@@ -6,30 +6,26 @@ import { X, ImagePlus } from "lucide-react";
 interface Adjunto {
   id: string;
   nombre: string;
-  url: string;
   tipo: string;
 }
 
-export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
+export function PublicTicketGallery({ ticketId, adjuntos }: { ticketId: string; adjuntos: Adjunto[] }) {
   const imgs = adjuntos.filter((a) => a.tipo.startsWith("image/"));
-  const [lightbox, setLightbox] = useState<{ url: string; nombre: string; idx: number } | null>(null);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const lightbox = lightboxIdx !== null && imgs[lightboxIdx] ? { ...imgs[lightboxIdx], idx: lightboxIdx } : null;
+  const src = (adjuntoId: string) => `/api/public/tickets/${ticketId}/adjuntos/${adjuntoId}`;
 
   useEffect(() => {
-    if (!lightbox) return;
+    if (lightboxIdx === null) return;
+    const total = imgs.length;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") { setLightbox(null); return; }
-      if (e.key === "ArrowRight") {
-        const next = (lightbox.idx + 1) % imgs.length;
-        setLightbox({ url: imgs[next].url, nombre: imgs[next].nombre, idx: next });
-      }
-      if (e.key === "ArrowLeft") {
-        const prev = (lightbox.idx - 1 + imgs.length) % imgs.length;
-        setLightbox({ url: imgs[prev].url, nombre: imgs[prev].nombre, idx: prev });
-      }
+      if (e.key === "Escape") { setLightboxIdx(null); return; }
+      if (e.key === "ArrowRight") setLightboxIdx((i) => (i === null ? null : (i + 1) % total));
+      if (e.key === "ArrowLeft") setLightboxIdx((i) => (i === null ? null : (i - 1 + total) % total));
     };
     document.addEventListener("keydown", handler);
     return () => document.removeEventListener("keydown", handler);
-  }, [lightbox, imgs]);
+  }, [lightboxIdx, imgs.length]);
 
   if (imgs.length === 0) return null;
 
@@ -43,12 +39,12 @@ export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
           <button
             key={adj.id}
             type="button"
-            onClick={() => setLightbox({ url: adj.url, nombre: adj.nombre, idx })}
+            onClick={() => setLightboxIdx(idx)}
             className="group relative block overflow-hidden rounded-xl border-2 border-transparent bg-slate-100 shadow-sm hover:border-indigo-400 hover:shadow-md transition focus:outline-none focus:ring-2 focus:ring-indigo-400"
             title={adj.nombre}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={adj.url} alt={adj.nombre} className="h-28 w-auto max-w-[200px] object-cover" />
+            <img src={src(adj.id)} alt={adj.nombre} className="h-28 w-auto max-w-[200px] object-cover" />
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition rounded-xl bg-indigo-900/40">
               <ImagePlus className="h-5 w-5 text-white drop-shadow" />
               <span className="rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-bold text-slate-700">Ampliar</span>
@@ -60,11 +56,11 @@ export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
       {lightbox && (
         <div
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-4"
-          onClick={() => setLightbox(null)}
+          onClick={() => setLightboxIdx(null)}
         >
           <button
             type="button"
-            onClick={() => setLightbox(null)}
+            onClick={() => setLightboxIdx(null)}
             className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/30 transition"
             aria-label="Cerrar (Esc)"
           >
@@ -77,8 +73,7 @@ export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const prev = (lightbox.idx - 1 + imgs.length) % imgs.length;
-                  setLightbox({ url: imgs[prev].url, nombre: imgs[prev].nombre, idx: prev });
+                  setLightboxIdx((lightbox.idx - 1 + imgs.length) % imgs.length);
                 }}
                 className="absolute left-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
               >‹</button>
@@ -86,8 +81,7 @@ export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const next = (lightbox.idx + 1) % imgs.length;
-                  setLightbox({ url: imgs[next].url, nombre: imgs[next].nombre, idx: next });
+                  setLightboxIdx((lightbox.idx + 1) % imgs.length);
                 }}
                 className="absolute right-3 top-1/2 z-10 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/15 text-white text-2xl font-bold hover:bg-white/30 transition select-none"
               >›</button>
@@ -99,7 +93,7 @@ export function PublicTicketGallery({ adjuntos }: { adjuntos: Adjunto[] }) {
             <div className="rounded-2xl bg-white shadow-2xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src={lightbox.url}
+                src={src(lightbox.id)}
                 alt={lightbox.nombre}
                 className="block h-auto w-auto max-h-[80vh] max-w-[90vw] rounded-2xl"
               />

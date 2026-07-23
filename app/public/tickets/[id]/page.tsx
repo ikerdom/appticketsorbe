@@ -44,8 +44,10 @@ export default async function PublicTicketPage({ params }: Props) {
         },
         orderBy: { createdAt: "asc" }
       },
+      // Sin url: son data: URLs de varios MB — el cliente las pide a demanda
+      // vía /api/public/tickets/[id]/adjuntos/[adjuntoId] en vez de recibirlas en el HTML.
       adjuntos: {
-        select: { id: true, nombre: true, url: true, tipo: true },
+        select: { id: true, nombre: true, tipo: true },
         orderBy: { createdAt: "asc" }
       }
     }
@@ -117,7 +119,7 @@ export default async function PublicTicketPage({ params }: Props) {
         </div>
 
         {/* Capturas adjuntas */}
-        <PublicTicketGallery adjuntos={ticket.adjuntos} />
+        <PublicTicketGallery ticketId={params.id} adjuntos={ticket.adjuntos} />
 
         {/* Fechas */}
         <div className="rounded-xl border bg-white p-4 grid grid-cols-2 gap-4 text-sm">

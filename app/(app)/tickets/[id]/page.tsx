@@ -43,7 +43,9 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },
         orderBy: { createdAt: "asc" }
       },
-      adjuntos: { orderBy: { createdAt: "desc" } },
+      // Sin url: son data: URLs de varios MB — el cliente las pide a demanda
+      // vía /api/tickets/[id]/adjuntos/[adjuntoId] en vez de recibirlas en el HTML.
+      adjuntos: { select: { id: true, nombre: true, tipo: true, tamano: true, createdAt: true }, orderBy: { createdAt: "desc" } },
       notas: {
         where: { esAdmin: true },
         include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },

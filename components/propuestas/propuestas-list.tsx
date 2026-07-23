@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Lightbulb, Clock, CheckCircle2, XCircle, Eye, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { Lightbulb, Clock, CheckCircle2, XCircle, Eye, Plus, Undo2 } from "lucide-react";
 import { formatDateTimeEs } from "@/lib/dates";
 import { PropuestaForm } from "./propuesta-form";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogActions } from "@/components/ui/dialog";
 
 type PropuestaEstado = "PENDIENTE" | "REVISADA" | "ACEPTADA" | "DESCARTADA";
 
@@ -36,11 +38,30 @@ interface PropuestasListProps {
 export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultAutorEmail }: PropuestasListProps) {
   const [propuestas, setPropuestas] = useState<Propuesta[]>(initialPropuestas);
   const [showForm, setShowForm] = useState(false);
+  const [retirarId, setRetirarId] = useState<string | null>(null);
+  const [retirando, setRetirando] = useState(false);
 
   function onCreated(p: unknown) {
     setPropuestas(prev => [p as Propuesta, ...prev]);
     setShowForm(false);
   }
+
+  async function confirmRetirar() {
+    if (!retirarId) return;
+    setRetirando(true);
+    const res = await fetch(`/api/propuestas/${retirarId}`, { method: "DELETE" });
+    setRetirando(false);
+    setRetirarId(null);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "No se pudo retirar" }));
+      toast.error(body.error ?? "No se pudo retirar");
+      return;
+    }
+    setPropuestas(prev => prev.filter(p => p.id !== retirarId));
+    toast.success("Propuesta retirada");
+  }
+
+  const propuestaARetirar = propuestas.find(p => p.id === retirarId);
 
   const pendientes = propuestas.filter(p => p.estado === "PENDIENTE").length;
   const aceptadas = propuestas.filter(p => p.estado === "ACEPTADA").length;
@@ -110,11 +131,42 @@ export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultA
                 ) : cfg.hint ? (
                   <p className="text-[11px] italic text-slate-400">{cfg.hint}</p>
                 ) : null}
+                {p.estado === "PENDIENTE" && (
+                  <button
+                    type="button"
+                    onClick={() => setRetirarId(p.id)}
+                    className="mt-3 inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 hover:text-red-600 transition"
+                  >
+                    <Undo2 className="h-3 w-3" />
+                    Retirar propuesta
+                  </button>
+                )}
               </div>
             );
           })}
         </div>
       )}
+
+      <Dialog
+        open={retirarId !== null}
+        onClose={() => setRetirarId(null)}
+        title="¿Retirar esta propuesta?"
+        description={propuestaARetirar ? `"${propuestaARetirar.titulo}" se eliminará. Esta acción no se puede deshacer.` : undefined}
+      >
+        <DialogActions>
+          <Button type="button" variant="outline" onClick={() => setRetirarId(null)} disabled={retirando}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            className="bg-red-600 hover:bg-red-700 text-white disabled:opacity-50"
+            onClick={confirmRetirar}
+            disabled={retirando}
+          >
+            Sí, retirar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }

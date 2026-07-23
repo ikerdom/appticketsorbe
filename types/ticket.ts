@@ -21,7 +21,8 @@ export type TicketDetailData = Ticket & {
   comentarios: (Comentario & {
     autor: Pick<User, "id" | "email" | "nombre" | "name">;
   })[];
-  adjuntos: Adjunto[];
+  // Sin campo url — se sirve a demanda vía /api/tickets/[id]/adjuntos/[adjuntoId]
+  adjuntos: Pick<Adjunto, "id" | "nombre" | "tipo" | "tamano" | "createdAt">[];
   historial: {
     id: string;
     accion: string;
