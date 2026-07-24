@@ -556,7 +556,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
         </Card>
       ) : null}
 
-      <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => setDraggingOver(null)}>
+      <DndContext id="kanban-board" sensors={sensors} collisionDetection={collisionDetection} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => setDraggingOver(null)}>
         <div className="hidden gap-4 md:grid md:grid-cols-4" role="list" aria-label="Kanban de tickets">
           {(Object.keys(grouped) as Estado[]).map((estado) => {
             const { mine, others } = groupedSplit[estado];
