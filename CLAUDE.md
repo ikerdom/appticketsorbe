@@ -17,7 +17,7 @@ Antes de tocar código, lee siempre estos documentos en este orden:
 | [PLAN_MEJORAS.md](./PLAN_MEJORAS.md) | Mejoras planificadas con código exacto | Cuando vayas a implementar una feature |
 | [PLAN_PROPUESTAS.md](./PLAN_PROPUESTAS.md) | Plan módulo Propuestas de Mejora | Cuando trabajes en el módulo de propuestas |
 | [PLAN_BLOQUEADOS.md](./PLAN_BLOQUEADOS.md) | Estado BLOQUEADO + nota obligatoria al resolver | Cuando implementes bloqueos de tickets |
-| [PLAN_EDITOR_RICO.md](./PLAN_EDITOR_RICO.md) | Editor rico con imágenes inline (estilo Jira) — investigado, sin implementar | Cuando implementes el editor de texto enriquecido |
+| [PLAN_EDITOR_RICO.md](./PLAN_EDITOR_RICO.md) | Editor rico con imágenes inline (estilo Jira) — completo (R1-R9) | Referencia si tocas el editor o los adjuntos huérfanos |
 | [README.md](./README.md) | Setup inicial, deploy, comandos | Para arrancar el proyecto |
 
 ---
@@ -180,7 +180,7 @@ NOTIFICATIONS_ENABLED=true
 | Área | Estado |
 |------|--------|
 | Auth multi-empresa | ✅ Funciona |
-| Kanban drag & drop | ✅ Funciona (B001 resuelto con router.refresh) · 4ª columna BLOQUEADO |
+| Kanban drag & drop | ✅ Funciona (B001 resuelto con router.refresh · B012 warning hidratación resuelto) · 4ª columna BLOQUEADO |
 | Tickets CRUD | ✅ Funciona |
 | Estado BLOQUEADO | ✅ Con motivo obligatorio · SLA pausado (PLAN_BLOQUEADOS.md B1-B7) |
 | Nota obligatoria al resolver | ✅ En kanban y en detalle de ticket (PLAN_BLOQUEADOS.md B5) |
