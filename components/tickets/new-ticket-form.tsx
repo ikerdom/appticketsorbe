@@ -194,7 +194,6 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
 
       toast.success("Ticket creado correctamente");
       router.push(`/tickets/${ticket.id}`);
-      router.refresh();
     });
   });
 
