@@ -22,6 +22,12 @@ describe("sanitizeRichText", () => {
     expect(sanitizeRichText(html)).toContain("blob:http://localhost:3000/temp-id");
   });
 
+  it("quita <img src> externo http(s) (tracker pixel) aunque <a href> https sí se permita", () => {
+    const html = '<p><img src="https://evil.com/pixel.png" alt="x"></p>';
+    const out = sanitizeRichText(html);
+    expect(out).not.toContain("evil.com");
+  });
+
   it("quita el src si la URI no matchea ningún patrón permitido (p.ej. javascript:)", () => {
     const html = '<p><img src="javascript:alert(1)" alt="x"></p>';
     const out = sanitizeRichText(html);
