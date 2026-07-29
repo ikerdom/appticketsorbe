@@ -188,7 +188,8 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({ ticket }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("[POST /api/tickets] error al crear ticket:", error);
     return NextResponse.json({ error: "No se pudo crear el ticket" }, { status: 400 });
   }
 }
