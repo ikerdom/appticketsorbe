@@ -87,7 +87,6 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await requireCurrentUser();
     const body = await request.json();
     const data = nuevoTicketSchema.parse(body);
 
@@ -101,10 +100,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const activeCompanies = await prisma.empresa.findMany({
-      where: { isActive: true, isGlobalTarget: false, deletedAt: null },
-      select: { id: true, nombre: true }
-    });
+    // requireCurrentUser y activeCompanies no dependen entre si — en paralelo
+    // en vez de en serie, para no acumular latencia de red hacia Neon.
+    const [user, activeCompanies] = await Promise.all([
+      requireCurrentUser(),
+      prisma.empresa.findMany({
+        where: { isActive: true, isGlobalTarget: false, deletedAt: null },
+        select: { id: true, nombre: true }
+      })
+    ]);
     const allowed = new Set(activeCompanies.map((c) => c.id));
     const uniqueDestinatarios = Array.from(new Set(data.destinatarios)).filter((id) => allowed.has(id));
     if (!uniqueDestinatarios.length) {
@@ -112,71 +116,72 @@ export async function POST(request: NextRequest) {
     }
 
     const primaryDestinoId = uniqueDestinatarios[0];
+    const categoriaCustomTrim = data.categoriaCustom?.trim() || null;
 
-    const ticket = await prisma.$transaction(async (tx) => {
-      const created = await tx.ticket.create({
-        data: {
-          titulo: data.titulo,
-          descripcion,
-          empresaOrigenId: user.empresaId,
-          empresaDestinoId: primaryDestinoId,
-          personaAfectada: data.personaAfectada?.trim() || null,
-          contactoNombre: data.contactoNombre?.trim() || null,
-          contactoTelefono: data.contactoTelefono?.trim() || null,
-          contactoEmail: data.contactoEmail?.trim().toLowerCase() || null,
-          contactoReferencia: data.contactoReferencia?.trim() || null,
-          contactoNotas: data.contactoNotas?.trim() || null,
-          prioridad: data.prioridad,
-          categoria: data.categoria ?? "OTROS",
-          categoriaCustom: data.categoriaCustom?.trim() || null,
-          asignadoId: null,
-          estado: "ABIERTO",
-          creadorId: user.id
-        }
-      });
-
-      await tx.ticketEmpresaDestino.createMany({
-        data: uniqueDestinatarios.map((empresaId) => ({ ticketId: created.id, empresaId })),
-        skipDuplicates: true
-      });
-
-      await tx.historialTicket.create({
-        data: {
-          ticketId: created.id,
-          autorId: user.id,
-          accion: "TICKET_CREADO",
-          detalle: {
-            titulo: created.titulo,
-            prioridad: created.prioridad,
-            categoria: created.categoria,
-            categoriaCustom: created.categoriaCustom,
-            destinatarios: uniqueDestinatarios
+    // Nested write: ticket + destinos + historial en una sola llamada a
+    // Prisma (un solo viaje de red a Neon) en vez de 3 awaits secuenciales
+    // dentro de una transaccion interactiva — eso era gran parte de la
+    // latencia que provocaba el timeout intermitente al crear ticket.
+    const ticket = await prisma.ticket.create({
+      data: {
+        titulo: data.titulo,
+        descripcion,
+        empresaOrigenId: user.empresaId,
+        empresaDestinoId: primaryDestinoId,
+        personaAfectada: data.personaAfectada?.trim() || null,
+        contactoNombre: data.contactoNombre?.trim() || null,
+        contactoTelefono: data.contactoTelefono?.trim() || null,
+        contactoEmail: data.contactoEmail?.trim().toLowerCase() || null,
+        contactoReferencia: data.contactoReferencia?.trim() || null,
+        contactoNotas: data.contactoNotas?.trim() || null,
+        prioridad: data.prioridad,
+        categoria: data.categoria ?? "OTROS",
+        categoriaCustom: categoriaCustomTrim,
+        asignadoId: null,
+        estado: "ABIERTO",
+        creadorId: user.id,
+        destinos: {
+          createMany: {
+            data: uniqueDestinatarios.map((empresaId) => ({ empresaId })),
+            skipDuplicates: true
+          }
+        },
+        historial: {
+          create: {
+            autorId: user.id,
+            accion: "TICKET_CREADO",
+            detalle: {
+              titulo: data.titulo,
+              prioridad: data.prioridad,
+              categoria: data.categoria ?? "OTROS",
+              categoriaCustom: categoriaCustomTrim,
+              destinatarios: uniqueDestinatarios
+            }
           }
         }
-      });
-
-      if (created.categoriaCustom?.trim()) {
-        await tx.ticketCategoriaCustom.upsert({
-          where: { nombre: created.categoriaCustom.trim() },
-          update: {},
-          create: { nombre: created.categoriaCustom.trim() }
-        });
       }
-
-      return created;
     });
 
-    // Adjuntos huérfanos (imágenes pegadas inline en la descripción antes
-    // de que este ticket existiera) — asociarlos ahora que ya tiene id.
+    // Adjuntos huérfanos, notificaciones y el upsert de categoria custom no
+    // bloquean entre si — en paralelo en vez de en serie.
     const adjuntoIds = Array.from(extractReferencedAdjuntoIds([descripcion]));
-    await associarAdjuntosHuerfanos(adjuntoIds, ticket.id, user.id);
-
-    const destinatariosUsers = await prisma.user.findMany({
-      where: { activo: true, empresaId: { in: uniqueDestinatarios }, id: { not: user.id } },
-      select: { id: true }
-    });
-
     const empresaNombre = activeCompanies.find((c) => c.id === primaryDestinoId)?.nombre ?? "Incidencia";
+
+    const [, destinatariosUsers] = await Promise.all([
+      associarAdjuntosHuerfanos(adjuntoIds, ticket.id, user.id),
+      prisma.user.findMany({
+        where: { activo: true, empresaId: { in: uniqueDestinatarios }, id: { not: user.id } },
+        select: { id: true }
+      }),
+      categoriaCustomTrim
+        ? prisma.ticketCategoriaCustom.upsert({
+            where: { nombre: categoriaCustomTrim },
+            update: {},
+            create: { nombre: categoriaCustomTrim }
+          })
+        : Promise.resolve(null)
+    ]);
+
     await sendTicketNotification({
       toUserIds: destinatariosUsers.map((u) => u.id),
       tipo: "ticket_creado",
