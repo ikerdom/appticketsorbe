@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { filtroSchema, nuevoTicketSchema } from "@/lib/validations";
@@ -80,7 +81,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       tickets: tickets.map((t) => ({ ...t, unread: unread[t.id] ?? false }))
     });
-  } catch {
+  } catch (error) {
+    console.error("[GET /api/tickets] error al listar tickets:", error);
     return NextResponse.json({ error: "No se pudieron cargar tickets" }, { status: 400 });
   }
 }
@@ -195,6 +197,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ticket }, { status: 201 });
   } catch (error) {
     console.error("[POST /api/tickets] error al crear ticket:", error);
-    return NextResponse.json({ error: "No se pudo crear el ticket" }, { status: 400 });
+    if (error instanceof ZodError) {
+      const message = error.errors[0]?.message ?? "Revisa los datos del formulario.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    if (error instanceof Error && error.message === "No autenticado") {
+      return NextResponse.json({ error: "Tu sesión ha caducado. Recarga la página e inicia sesión de nuevo." }, { status: 401 });
+    }
+    return NextResponse.json(
+      { error: "No se pudo crear el ticket. Si el problema persiste, contacta con Iker." },
+      { status: 500 }
+    );
   }
 }
