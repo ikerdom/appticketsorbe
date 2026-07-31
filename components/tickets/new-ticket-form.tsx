@@ -149,6 +149,29 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
     form.setValue("destinatarios", empresas.map((e) => e.id), { shouldValidate: true });
   }
 
+  // Orden de arriba a abajo del formulario — al fallar la validación, avisamos
+  // con toast (visible aunque el usuario esté abajo del todo, junto al botón
+  // "Crear ticket") y saltamos al primer campo que falte, en vez de no hacer
+  // nada visible como pasaba antes.
+  const FIELD_ORDER = ["titulo", "destinatarios", "contactoNombre", "contactoTelefono", "contactoEmail", "contactoReferencia"] as const;
+  const FIELD_SCROLL_ID: Record<(typeof FIELD_ORDER)[number], string> = {
+    titulo: "titulo",
+    destinatarios: "empresa-afectada",
+    contactoNombre: "contactoNombre",
+    contactoTelefono: "contactoTelefono",
+    contactoEmail: "contactoEmail",
+    contactoReferencia: "contactoReferencia"
+  };
+
+  function onInvalid(errors: typeof form.formState.errors) {
+    const firstKey = FIELD_ORDER.find((key) => errors[key]);
+    const message = (firstKey && (errors[firstKey]?.message as string)) || "Revisa los campos marcados en rojo.";
+    toast.error(message);
+    if (firstKey) {
+      document.getElementById(FIELD_SCROLL_ID[firstKey])?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   const onSubmit = form.handleSubmit((values) => {
     const chars = stripHtml(values.descripcion).length;
     if (chars < MIN_CARACTERES) {
@@ -195,7 +218,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
       toast.success("Ticket creado correctamente");
       router.push(`/tickets/${ticket.id}`);
     });
-  });
+  }, onInvalid);
 
   return (
     <Card className="relative rounded-2xl shadow-sm">
@@ -213,7 +236,7 @@ export function NewTicketForm({ empresas, categoriasCustom, currentEmpresaId, cu
             {form.formState.errors.titulo && <p className="text-sm text-red-600">{form.formState.errors.titulo.message}</p>}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2" id="empresa-afectada">
             <Label>Empresa(s) afectada(s)</Label>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Empresa afectada">
               <button
