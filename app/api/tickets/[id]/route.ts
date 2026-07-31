@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { editarTicketSchema } from "@/lib/validations";
 import { puedeEditarTicket, puedeEliminarTicket, puedeVerTicket } from "@/lib/permisos";
@@ -35,7 +36,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
     }
 
     return NextResponse.json({ ticket });
-  } catch {
+  } catch (error) {
+    console.error(`[GET /api/tickets/${params.id}] error al cargar ticket:`, error);
     return NextResponse.json({ error: "No se pudo cargar el ticket" }, { status: 400 });
   }
 }
@@ -131,8 +133,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     }
 
     return NextResponse.json({ ticket: updated });
-  } catch {
-    return NextResponse.json({ error: "No se pudo actualizar" }, { status: 400 });
+  } catch (error) {
+    console.error(`[PATCH /api/tickets/${params.id}] error al actualizar ticket:`, error);
+    if (error instanceof ZodError) {
+      const message = error.errors[0]?.message ?? "Revisa los datos del formulario.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "No se pudo actualizar el ticket. Si el problema persiste, contacta con Iker." }, { status: 500 });
   }
 }
 
@@ -153,7 +160,8 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     });
     await prisma.ticket.delete({ where: { id: params.id } });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error(`[DELETE /api/tickets/${params.id}] error al eliminar ticket:`, error);
     return NextResponse.json({ error: "No se pudo eliminar" }, { status: 400 });
   }
 }

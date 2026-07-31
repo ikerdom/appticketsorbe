@@ -1,4 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 import { prisma } from "@/lib/prisma";
 import { comentarioSchema } from "@/lib/validations";
 import { puedeVerTicket } from "@/lib/permisos";
@@ -64,7 +65,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     });
 
     return NextResponse.json({ comentario }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "No se pudo comentar" }, { status: 400 });
+  } catch (error) {
+    console.error(`[POST /api/tickets/${params.id}/comentarios] error al comentar:`, error);
+    if (error instanceof ZodError) {
+      const message = error.errors[0]?.message ?? "Revisa el comentario.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+    return NextResponse.json({ error: "No se pudo enviar el comentario. Si el problema persiste, contacta con Iker." }, { status: 500 });
   }
 }
