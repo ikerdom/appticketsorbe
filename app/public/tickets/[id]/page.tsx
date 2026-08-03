@@ -123,7 +123,7 @@ export default async function PublicTicketPage({ params }: Props) {
         {/* Descripción */}
         <div className="rounded-xl border bg-white p-4">
           <p className="mb-2 text-xs font-medium text-slate-500 uppercase tracking-wide">Descripción</p>
-          <RichContent html={ticket.descripcion} />
+          <RichContent html={ticket.descripcion} publicTicketId={params.id} />
         </div>
 
         {/* Capturas adjuntas — solo huérfanas, las inline ya se ven en el texto */}
@@ -161,7 +161,7 @@ export default async function PublicTicketPage({ params }: Props) {
                   </span>
                   <span className="text-xs text-slate-400">{formatRelativeEs(c.createdAt)}</span>
                 </div>
-                <RichContent html={c.contenido} compact className="text-slate-600" />
+                <RichContent html={c.contenido} compact className="text-slate-600" publicTicketId={params.id} />
               </div>
             ))}
           </div>

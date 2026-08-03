@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractReferencedAdjuntoIds, isRichContentEmpty, looksLikeHtml, stripHtml, toDisplayHtml } from "../lib/rich-content";
+import { extractReferencedAdjuntoIds, isRichContentEmpty, looksLikeHtml, stripHtml, toDisplayHtml, toPublicImageSrc } from "../lib/rich-content";
 
 describe("stripHtml", () => {
   it("quita las etiquetas y deja solo el texto", () => {
@@ -67,5 +67,27 @@ describe("extractReferencedAdjuntoIds", () => {
 
   it("vacío si no hay imágenes referenciadas", () => {
     expect(extractReferencedAdjuntoIds(["<p>sin imagenes</p>"]).size).toBe(0);
+  });
+});
+
+describe("toPublicImageSrc — imagenes inline visibles en la vista publica sin login", () => {
+  it("reescribe /api/adjuntos/{id} (adjunto huerfano) a la ruta publica del ticket", () => {
+    const html = '<img src="/api/adjuntos/abc123">';
+    expect(toPublicImageSrc(html, "ticket1")).toBe('<img src="/api/public/tickets/ticket1/adjuntos/abc123">');
+  });
+
+  it("reescribe /api/tickets/{id}/adjuntos/{id} (adjunto directo) a la ruta publica", () => {
+    const html = '<img src="/api/tickets/xyz789/adjuntos/abc123">';
+    expect(toPublicImageSrc(html, "xyz789")).toBe('<img src="/api/public/tickets/xyz789/adjuntos/abc123">');
+  });
+
+  it("deja igual una src que ya es publica", () => {
+    const html = '<img src="/api/public/tickets/xyz789/adjuntos/abc123">';
+    expect(toPublicImageSrc(html, "xyz789")).toBe(html);
+  });
+
+  it("no toca el resto del html", () => {
+    const html = '<p>Texto</p><img src="/api/adjuntos/abc123" alt="foo">';
+    expect(toPublicImageSrc(html, "t1")).toBe('<p>Texto</p><img src="/api/public/tickets/t1/adjuntos/abc123" alt="foo">');
   });
 });

@@ -21,6 +21,19 @@ export function toDisplayHtml(content: string): string {
   return `<p>${escaped.replace(/\n/g, "<br />")}</p>`;
 }
 
+/**
+ * Reescribe <img src> de las rutas privadas de adjuntos (/api/adjuntos/{id},
+ * /api/tickets/{id}/adjuntos/{id}) a la ruta publica (/api/public/tickets/
+ * {ticketId}/adjuntos/{id}) — para la vista publica sin login, donde el
+ * visitante no tiene sesion y esas rutas privadas le devuelven 401/redirect
+ * a login, dejando la imagen rota. Las que ya son publicas se dejan igual.
+ */
+export function toPublicImageSrc(html: string, ticketId: string): string {
+  return html
+    .replace(/src="\/api\/adjuntos\/([a-zA-Z0-9_-]+)"/g, `src="/api/public/tickets/${ticketId}/adjuntos/$1"`)
+    .replace(/src="\/api\/tickets\/[a-zA-Z0-9_-]+\/adjuntos\/([a-zA-Z0-9_-]+)"/g, `src="/api/public/tickets/${ticketId}/adjuntos/$1"`);
+}
+
 /** Extrae el texto plano de un HTML — para contar caracteres reales (quality gate) sin contar marcado. */
 export function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
