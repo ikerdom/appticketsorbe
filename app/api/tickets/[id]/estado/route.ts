@@ -29,9 +29,13 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const action = body.action ?? "set_estado";
     const isAdmin = user.rol === "ADMIN";
 
-    // Resolved tickets are permanent — no state changes except archiving
-    if (ticket.estado === "RESUELTO" && action !== "archive") {
+    // Resolved tickets are permanent — no state changes except archiving o
+    // reabrir (solo admin, vía botón — no arrastrando en el kanban).
+    if (ticket.estado === "RESUELTO" && action !== "archive" && action !== "reopen") {
       return NextResponse.json({ error: "Un ticket resuelto no puede cambiar de estado." }, { status: 403 });
+    }
+    if (action === "reopen" && !isAdmin) {
+      return NextResponse.json({ error: "Solo un administrador puede reabrir un ticket resuelto." }, { status: 403 });
     }
 
     let data: Record<string, unknown> = {};
@@ -62,7 +66,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       accionHistorial = "ESTADO_CAMBIADO";
       detalle = { de: ticket.estado, a: "RESUELTO", horasDedicadas: body.horasDedicadas, notaResolucion: body.notaResolucion };
     } else if (action === "reopen") {
-      data = { estado: "ABIERTO", resueltoAt: null, motivoBloqueo: null };
+      // Vuelve a la primera columna del kanban — limpia también la nota de
+      // resolución, que ya no aplica (se pedirá una nueva al volver a resolver).
+      data = { estado: "ABIERTO", resueltoAt: null, motivoBloqueo: null, notaResolucion: null };
       accionHistorial = "ESTADO_CAMBIADO";
       detalle = { de: ticket.estado, a: "ABIERTO" };
     } else if (action === "archive") {

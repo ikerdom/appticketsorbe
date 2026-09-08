@@ -761,9 +761,25 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   </Button>
                 </div>
               ) : (
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center">
-                  <p className="text-sm font-semibold text-emerald-700">✓ Ticket resuelto</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Este ticket está cerrado y no se puede editar</p>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-center space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-emerald-700">✓ Ticket resuelto</p>
+                    <p className="text-xs text-emerald-600 mt-0.5">Este ticket está cerrado y no se puede editar</p>
+                  </div>
+                  {isAdmin && (
+                    <Button
+                      variant="outline"
+                      className="w-full bg-white"
+                      onClick={() => setConfirmDialog({
+                        title: "Reabrir ticket",
+                        description: "Vuelve a la columna Abierto. Se borra la nota de \"cómo se resolvió\" — habrá que escribir una nueva al volver a resolverlo.",
+                        confirmLabel: "Reabrir",
+                        action: () => void performAction("reopen")
+                      })}
+                    >
+                      ↩ Reabrir (volver a Abierto)
+                    </Button>
+                  )}
                 </div>
               )}
 
