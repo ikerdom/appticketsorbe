@@ -449,39 +449,42 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
           </Button>
         </DialogActions>
       </Dialog>
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setShowFilters((v) => !v)}
-          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
-            hasActiveFilters
-              ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
-              : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-          }`}
-        >
-          <SlidersHorizontal className="h-3.5 w-3.5" />
-          Filtros
-          {visibleTickets.length > 0 && (
-            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
-              hasActiveFilters ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
-            }`}>
-              {visibleTickets.length}
-            </span>
-          )}
-          {showFilters
-            ? <ChevronUp className="h-3 w-3 ml-0.5" />
-            : <ChevronDown className="h-3 w-3 ml-0.5" />
-          }
-        </button>
-        {hasActiveFilters && (
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-base font-bold text-slate-800">Todas las incidencias</h2>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            className="rounded-md px-2 py-1 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
-            onClick={() => setFilters({ empresaId: "", prioridad: "", categoria: "" })}
+            onClick={() => setShowFilters((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+              hasActiveFilters
+                ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+                : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+            }`}
           >
-            × Limpiar
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filtros
+            {visibleTickets.length > 0 && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                hasActiveFilters ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+              }`}>
+                {visibleTickets.length}
+              </span>
+            )}
+            {showFilters
+              ? <ChevronUp className="h-3 w-3 ml-0.5" />
+              : <ChevronDown className="h-3 w-3 ml-0.5" />
+            }
           </button>
-        )}
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="rounded-md px-2 py-1 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+              onClick={() => setFilters({ empresaId: "", prioridad: "", categoria: "" })}
+            >
+              × Limpiar
+            </button>
+          )}
+        </div>
       </div>
 
       {showFilters && (

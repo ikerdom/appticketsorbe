@@ -74,20 +74,6 @@ export default async function DashboardPage() {
     });
 
   if (isAdmin) {
-    const empresaStats = empresas.map((empresa) => {
-      // Solo tickets donde esta empresa es DESTINO (afectada), no donde es origen/creadora
-      const propios = tickets.filter((t) =>
-        t.destinos.some((d) => d.empresaId === empresa.id)
-      );
-      return {
-        ...empresa,
-        abiertos: propios.filter((t) => t.estado === "ABIERTO").length,
-        enCurso: propios.filter((t) => t.estado === "EN_CURSO").length,
-        resueltos: propios.filter((t) => t.estado === "RESUELTO").length,
-        total: propios.length
-      };
-    });
-
     return (
       <div className="space-y-5">
         <div>
@@ -95,13 +81,11 @@ export default async function DashboardPage() {
           <p className="text-sm text-slate-500">Vista de administrador · todas las empresas</p>
         </div>
         <AdminEmpresasPanel
-          empresas={empresaStats}
+          empresas={empresas}
           allTickets={ticketsWithUnread}
-          empresasList={empresas}
           usuarios={usuarios}
           currentUserId={user.id}
           currentUserEmpresaId={user.empresaId}
-          totalTickets={totalTicketsAdmin}
         />
       </div>
     );
