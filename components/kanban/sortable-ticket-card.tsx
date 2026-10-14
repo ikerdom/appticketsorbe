@@ -22,7 +22,7 @@ const SLA_HORAS: Record<string, number> = {
 };
 
 function getSlaStatus(createdAt: Date, estado: string, prioridad: string): { label: string; color: string; ring: string; pulse?: boolean } | null {
-  if (estado === "RESUELTO" || estado === "BLOQUEADO") return null;
+  if (estado === "RESUELTO" || estado === "BLOQUEADO" || estado === "QA") return null;
   const hours = (Date.now() - new Date(createdAt).getTime()) / 3600000;
   const limit = SLA_HORAS[prioridad] ?? 72;
   const label = hours < 24 ? `${Math.round(hours)}h` : `${Math.floor(hours / 24)}d`;

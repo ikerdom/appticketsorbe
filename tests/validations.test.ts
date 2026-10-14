@@ -195,6 +195,10 @@ describe("estadoSchema", () => {
     expect(estadoSchema.safeParse({ estado: "RESUELTO" }).success).toBe(true);
   });
 
+  it("acepta QA", () => {
+    expect(estadoSchema.safeParse({ estado: "QA" }).success).toBe(true);
+  });
+
   it("rechaza BLOQUEADO (no está en el schema de transición directa)", () => {
     // BLOQUEADO tiene su propia ruta de API con motivoBloqueo — no va por estadoSchema
     const result = estadoSchema.safeParse({ estado: "BLOQUEADO" });

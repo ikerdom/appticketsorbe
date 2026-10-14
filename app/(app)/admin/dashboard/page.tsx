@@ -86,10 +86,10 @@ export default async function AdminDashboardPage({
       })
     ]);
 
-  const estado = { ABIERTO: 0, EN_CURSO: 0, BLOQUEADO: 0, RESUELTO: 0 };
-  const estadoPrev = { ABIERTO: 0, EN_CURSO: 0, BLOQUEADO: 0, RESUELTO: 0 };
-  for (const item of estadoGroup) estado[item.estado] = item._count.estado;
-  for (const item of prevEstadoGroup) estadoPrev[item.estado] = item._count.estado;
+  const estado = { ABIERTO: 0, EN_CURSO: 0, QA: 0, BLOQUEADO: 0, RESUELTO: 0 };
+  const estadoPrev = { ABIERTO: 0, EN_CURSO: 0, QA: 0, BLOQUEADO: 0, RESUELTO: 0 };
+  for (const item of estadoGroup) (estado as Record<string, number>)[item.estado] = item._count.estado;
+  for (const item of prevEstadoGroup) (estadoPrev as Record<string, number>)[item.estado] = item._count.estado;
 
   const comparePct = (current: number, previous: number) => {
     if (previous <= 0) return current > 0 ? 100 : 0;
@@ -178,6 +178,7 @@ export default async function AdminDashboardPage({
           comparePct: {
             ABIERTO: comparePct(estado.ABIERTO, estadoPrev.ABIERTO),
             EN_CURSO: comparePct(estado.EN_CURSO, estadoPrev.EN_CURSO),
+            QA: comparePct(estado.QA, estadoPrev.QA),
             RESUELTO: comparePct(estado.RESUELTO, estadoPrev.RESUELTO)
           },
           origen,

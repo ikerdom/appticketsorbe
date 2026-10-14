@@ -12,7 +12,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const user = await requireCurrentUser();
     const body = (await request.json()) as {
       action?: TicketAction;
-      estado?: "ABIERTO" | "EN_CURSO" | "BLOQUEADO" | "RESUELTO";
+      estado?: "ABIERTO" | "EN_CURSO" | "QA" | "BLOQUEADO" | "RESUELTO";
       horasDedicadas?: number;
       notaResolucion?: string;
       motivoBloqueo?: string;
@@ -84,9 +84,9 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         return NextResponse.json({ error: "Estado no válido." }, { status: 400 });
       }
 
-      if (estado === "EN_CURSO") {
+      if (estado === "EN_CURSO" || estado === "QA") {
         if (!isAdmin) {
-          return NextResponse.json({ error: "Solo un administrador puede marcar un ticket en curso." }, { status: 403 });
+          return NextResponse.json({ error: "Solo un administrador puede mover este ticket." }, { status: 403 });
         }
         data = { estado, asignadoId: ticket.asignadoId ?? user.id, resueltoAt: null, motivoBloqueo: null };
       } else if (estado === "ABIERTO") {

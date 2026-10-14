@@ -43,6 +43,12 @@ const COLUMN_STYLES: Record<Estado, { header: string; dot: string; badge: string
     badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
     dropzone: "bg-amber-50/40"
   },
+  QA: {
+    header: "bg-violet-50 border-violet-100 text-violet-800",
+    dot: "bg-violet-500",
+    badge: "bg-violet-100 text-violet-700 ring-1 ring-violet-200",
+    dropzone: "bg-violet-50/40"
+  },
   BLOQUEADO: {
     header: "bg-red-50 border-red-100 text-red-800",
     dot: "bg-red-500",
@@ -109,6 +115,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     prioridad: "",
     categoria: ""
   });
+  const [showFilters, setShowFilters] = useState(false);
 
   // Sync empresa filter when parent (AdminEmpresasPanel) changes selected company
   const prevEmpresaFilter = useRef(initialEmpresaFilter);
@@ -125,14 +132,14 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
   const collisionDetection: CollisionDetection = (args) => {
     const pointerHits = pointerWithin(args);
     // If pointer is within a column droppable, use that
-    const columnHit = pointerHits.find((c) => c.id === "ABIERTO" || c.id === "EN_CURSO" || c.id === "BLOQUEADO" || c.id === "RESUELTO");
+    const columnHit = pointerHits.find((c) => c.id === "ABIERTO" || c.id === "EN_CURSO" || c.id === "QA" || c.id === "BLOQUEADO" || c.id === "RESUELTO");
     if (columnHit) return [columnHit];
     // Otherwise fall back to closestCenter (works for ticket-over-ticket reorder)
     return closestCenter(args);
   };
 
   function getTargetEstado(overId: string): Estado | null {
-    if (overId === "ABIERTO" || overId === "EN_CURSO" || overId === "BLOQUEADO" || overId === "RESUELTO") return overId as Estado;
+    if (overId === "ABIERTO" || overId === "EN_CURSO" || overId === "QA" || overId === "BLOQUEADO" || overId === "RESUELTO") return overId as Estado;
     const overTicket = tickets.find((t) => t.id === overId);
     return overTicket?.estado ?? null;
   }
@@ -182,6 +189,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     () => ({
       ABIERTO: visibleTickets.filter((t) => t.estado === "ABIERTO"),
       EN_CURSO: visibleTickets.filter((t) => t.estado === "EN_CURSO"),
+      QA: visibleTickets.filter((t) => t.estado === "QA"),
       BLOQUEADO: visibleTickets.filter((t) => t.estado === "BLOQUEADO"),
       RESUELTO: visibleTickets.filter((t) => t.estado === "RESUELTO")
     }),
@@ -200,6 +208,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
     () => ({
       ABIERTO: split(grouped.ABIERTO),
       EN_CURSO: split(grouped.EN_CURSO),
+      QA: split(grouped.QA),
       BLOQUEADO: split(grouped.BLOQUEADO),
       RESUELTO: split(grouped.RESUELTO)
     }),
@@ -440,68 +449,82 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
           </Button>
         </DialogActions>
       </Dialog>
-      <Card className="rounded-xl border-0 bg-white p-4 shadow-sm ring-1 ring-slate-900/5">
-        <div className="mb-3 flex items-center gap-2 text-sm text-slate-600">
-          <SlidersHorizontal className="h-4 w-4" />
-          <span className="font-medium">Filtros</span>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setShowFilters((v) => !v)}
+          className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition ${
+            hasActiveFilters
+              ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
+              : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+          }`}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filtros
           {visibleTickets.length > 0 && (
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+              hasActiveFilters ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+            }`}>
               {visibleTickets.length}
             </span>
           )}
-        </div>
-
-        <div className="grid gap-2.5 md:grid-cols-3">
-          <Select
-            value={filters.empresaId}
-            onChange={(e) => setFilters(prev => ({ ...prev, empresaId: e.target.value }))}
+          {showFilters
+            ? <ChevronUp className="h-3 w-3 ml-0.5" />
+            : <ChevronDown className="h-3 w-3 ml-0.5" />
+          }
+        </button>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            className="rounded-md px-2 py-1 text-xs text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+            onClick={() => setFilters({ empresaId: "", prioridad: "", categoria: "" })}
           >
-            <option value="">{isAdmin ? "Todas las empresas" : "Todos mis tickets"}</option>
-            {empresas.map((empresa) => (
-              <option key={empresa.id} value={empresa.id}>
-                {empresa.nombre}
-              </option>
-            ))}
-          </Select>
+            × Limpiar
+          </button>
+        )}
+      </div>
 
-          <Select
-            value={filters.prioridad}
-            onChange={(e) => setFilters(prev => ({ ...prev, prioridad: e.target.value }))}
-          >
-            <option value="">Cualquier prioridad</option>
-            {Object.values(Prioridad).map((prioridad) => (
-              <option key={prioridad} value={prioridad}>
-                {prioridad}
-              </option>
-            ))}
-          </Select>
-
-          <Input
-            list="categorias-options"
-            value={filters.categoria}
-            onChange={(e) => setFilters(prev => ({ ...prev, categoria: e.target.value }))}
-            placeholder="Filtrar por categoría…"
-          />
-          <datalist id="categorias-options">
-            {CATEGORY_OPTIONS.map((categoria) => (
-              <option key={categoria} value={categoria} />
-            ))}
-          </datalist>
-        </div>
-
-        {hasActiveFilters ? (
-          <div className="mt-2.5 flex justify-end">
-            <button
-              type="button"
-              className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-500 hover:bg-slate-100 hover:text-slate-700"
-              onClick={() => setFilters({ empresaId: "", prioridad: "", categoria: "" })}
+      {showFilters && (
+        <Card className="rounded-xl border-0 bg-white p-3 shadow-sm ring-1 ring-slate-900/5">
+          <div className="grid gap-2 md:grid-cols-3">
+            <Select
+              value={filters.empresaId}
+              onChange={(e) => setFilters(prev => ({ ...prev, empresaId: e.target.value }))}
             >
-              × Limpiar filtros
-            </button>
-          </div>
-        ) : null}
+              <option value="">{isAdmin ? "Todas las empresas" : "Todos mis tickets"}</option>
+              {empresas.map((empresa) => (
+                <option key={empresa.id} value={empresa.id}>
+                  {empresa.nombre}
+                </option>
+              ))}
+            </Select>
 
-      </Card>
+            <Select
+              value={filters.prioridad}
+              onChange={(e) => setFilters(prev => ({ ...prev, prioridad: e.target.value }))}
+            >
+              <option value="">Cualquier prioridad</option>
+              {Object.values(Prioridad).map((prioridad) => (
+                <option key={prioridad} value={prioridad}>
+                  {prioridad}
+                </option>
+              ))}
+            </Select>
+
+            <Input
+              list="categorias-options"
+              value={filters.categoria}
+              onChange={(e) => setFilters(prev => ({ ...prev, categoria: e.target.value }))}
+              placeholder="Filtrar por categoría…"
+            />
+            <datalist id="categorias-options">
+              {CATEGORY_OPTIONS.map((categoria) => (
+                <option key={categoria} value={categoria} />
+              ))}
+            </datalist>
+          </div>
+        </Card>
+      )}
 
       {visibleTickets.length === 0 ? (
         <div className="rounded-xl border border-dashed bg-white p-10 text-center shadow-sm">
@@ -557,7 +580,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       ) : null}
 
       <DndContext id="kanban-board" sensors={sensors} collisionDetection={collisionDetection} onDragMove={onDragMove} onDragEnd={onDragEnd} onDragCancel={() => setDraggingOver(null)}>
-        <div className="hidden gap-4 md:grid md:grid-cols-4" role="list" aria-label="Kanban de tickets">
+        <div className="hidden gap-3 md:grid md:grid-cols-5" role="list" aria-label="Kanban de tickets">
           {(Object.keys(grouped) as Estado[]).map((estado) => {
             const { mine, others } = groupedSplit[estado];
             const all = grouped[estado];

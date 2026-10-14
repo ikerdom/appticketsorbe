@@ -26,9 +26,9 @@ const AdminCharts = dynamic(() => import("@/components/tickets/admin-charts").th
 });
 
 interface MetricData {
-  estado: { ABIERTO: number; EN_CURSO: number; RESUELTO: number };
-  estadoPrev: { ABIERTO: number; EN_CURSO: number; RESUELTO: number };
-  comparePct: { ABIERTO: number; EN_CURSO: number; RESUELTO: number };
+  estado: { ABIERTO: number; EN_CURSO: number; QA: number; RESUELTO: number };
+  estadoPrev: { ABIERTO: number; EN_CURSO: number; QA: number; RESUELTO: number };
+  comparePct: { ABIERTO: number; EN_CURSO: number; QA: number; RESUELTO: number };
   origen: { nombre: string; total: number }[];
   destino: { nombre: string; total: number }[];
   prioridad: { prioridad: string; total: number }[];

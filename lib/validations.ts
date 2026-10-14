@@ -83,7 +83,7 @@ export const comentarioSchema = z.object({
 });
 
 export const estadoSchema = z.object({
-  estado: z.enum(["ABIERTO", "EN_CURSO", "RESUELTO"])
+  estado: z.enum(["ABIERTO", "EN_CURSO", "QA", "RESUELTO"])
 });
 
 export const filtroSchema = z.object({

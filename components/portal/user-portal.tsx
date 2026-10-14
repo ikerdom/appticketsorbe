@@ -9,7 +9,7 @@ import {
 import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
 import { Dialog } from "@/components/ui/dialog";
 
-type TicketEstado = "ABIERTO" | "EN_CURSO" | "BLOQUEADO" | "RESUELTO";
+type TicketEstado = "ABIERTO" | "EN_CURSO" | "QA" | "BLOQUEADO" | "RESUELTO";
 type Prioridad = "BAJA" | "MEDIA" | "ALTA" | "CRITICA";
 
 interface PortalTicket {
@@ -80,6 +80,14 @@ const COL_CONFIG: Record<TicketEstado, {
     badge: "bg-amber-100 text-amber-700 ring-1 ring-amber-200",
     bg: "bg-amber-50/30"
   },
+  QA: {
+    label: "Control QA",
+    icon: <CheckCircle2 className="h-3.5 w-3.5" />,
+    header: "bg-violet-50 border-violet-100 text-violet-800",
+    dot: "bg-violet-500",
+    badge: "bg-violet-100 text-violet-700 ring-1 ring-violet-200",
+    bg: "bg-violet-50/30"
+  },
   BLOQUEADO: {
     label: "Bloqueados",
     icon: <Lock className="h-3.5 w-3.5" />,
@@ -114,10 +122,11 @@ export function UserPortal({ tickets }: UserPortalProps) {
 
   const abiertos   = tickets.filter(t => t.estado === "ABIERTO");
   const enCurso    = tickets.filter(t => t.estado === "EN_CURSO");
+  const qaTickets  = tickets.filter(t => t.estado === "QA");
   const bloqueados = tickets.filter(t => t.estado === "BLOQUEADO");
   const resueltos  = tickets.filter(t => t.estado === "RESUELTO");
   const sinLeer    = tickets.filter(t => t.unread).length;
-  const activos    = abiertos.length + enCurso.length + bloqueados.length;
+  const activos    = abiertos.length + enCurso.length + qaTickets.length + bloqueados.length;
 
   const criticosAbiertos = abiertos.filter(t => t.prioridad === "CRITICA");
 
@@ -222,10 +231,11 @@ export function UserPortal({ tickets }: UserPortalProps) {
         </div>
       ) : (
         <>
-          {/* Desktop: 4 cols */}
-          <div className="hidden gap-3 md:grid md:grid-cols-4">
+          {/* Desktop: 5 cols */}
+          <div className="hidden gap-3 md:grid md:grid-cols-5">
             <KanbanCol estado="ABIERTO"  tickets={abiertos} />
             <KanbanCol estado="EN_CURSO" tickets={enCurso} />
+            <KanbanCol estado="QA"       tickets={qaTickets} />
             <KanbanCol estado="BLOQUEADO" tickets={bloqueados} />
             {/* Resueltos colapsables */}
             <div className="space-y-2">
@@ -254,13 +264,14 @@ export function UserPortal({ tickets }: UserPortalProps) {
 
           {/* Mobile: lista */}
           <div className="space-y-3 md:hidden">
-            {(["ABIERTO", "EN_CURSO", "BLOQUEADO", "RESUELTO"] as TicketEstado[]).map(estado => (
+            {(["ABIERTO", "EN_CURSO", "QA", "BLOQUEADO", "RESUELTO"] as TicketEstado[]).map(estado => (
               <KanbanCol
                 key={estado}
                 estado={estado}
                 tickets={
                   estado === "ABIERTO" ? abiertos
                   : estado === "EN_CURSO" ? enCurso
+                  : estado === "QA" ? qaTickets
                   : estado === "BLOQUEADO" ? bloqueados
                   : resueltos
                 }

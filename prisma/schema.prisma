@@ -271,6 +271,7 @@ enum PropuestaEstado {
 enum Estado {
   ABIERTO
   EN_CURSO
+  QA
   BLOQUEADO
   RESUELTO
 }
