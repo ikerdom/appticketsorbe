@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Trash2, Lightbulb, Clock, CheckCircle2, XCircle, Eye } from "lucide-react";
 import { formatDateTimeEs } from "@/lib/dates";
+import { decodeEmailForDisplay } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogActions } from "@/components/ui/dialog";
@@ -116,7 +117,7 @@ function PropuestaAdminCard({
 
       <p className="mb-3 text-[11px] text-slate-400">
         De: {propuesta.autorNombre}
-        {propuesta.autorEmail ? ` · ${propuesta.autorEmail}` : ""}
+        {propuesta.autorEmail ? ` · ${decodeEmailForDisplay(propuesta.autorEmail)}` : ""}
         {" · "}{formatDateTimeEs(propuesta.createdAt)}
       </p>
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatRelativeEs } from "@/lib/dates";
+import { decodeEmailForDisplay } from "@/lib/format";
 
 interface UsuarioRow {
   id: string;
@@ -174,7 +175,7 @@ export function AdminUsersTable({ usuarios, empresas }: { usuarios: UsuarioRow[]
                       </div>
                     </TableCell>
                     <TableCell>{nombre}</TableCell>
-                    <TableCell>{usuario.email}</TableCell>
+                    <TableCell>{decodeEmailForDisplay(usuario.email)}</TableCell>
                     <TableCell>
                       <span className="inline-flex rounded-full px-2.5 py-1 text-xs font-medium text-white"
                         style={{ backgroundColor: usuario.empresa.color || "#64748b" }}>

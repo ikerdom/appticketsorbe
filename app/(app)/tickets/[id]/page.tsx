@@ -40,7 +40,7 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
       creador: { select: { id: true, email: true, nombre: true, name: true } },
       asignado: { select: { id: true, email: true, nombre: true, name: true, image: true } },
       comentarios: {
-        include: { autor: { select: { id: true, email: true, nombre: true, name: true } } },
+        include: { autor: { select: { id: true, email: true, nombre: true, name: true, rol: true } } },
         orderBy: { createdAt: "asc" }
       },
       // Sin url: son data: URLs de varios MB — el cliente las pide a demanda

@@ -19,7 +19,7 @@ export type TicketDetailData = Ticket & {
   creador: Pick<User, "id" | "email" | "nombre" | "name">;
   asignado: Pick<User, "id" | "email" | "nombre" | "name" | "image"> | null;
   comentarios: (Comentario & {
-    autor: Pick<User, "id" | "email" | "nombre" | "name">;
+    autor: Pick<User, "id" | "email" | "nombre" | "name" | "rol">;
   })[];
   // Sin campo url — se sirve a demanda vía /api/tickets/[id]/adjuntos/[adjuntoId]
   adjuntos: Pick<Adjunto, "id" | "nombre" | "tipo" | "tamano" | "createdAt">[];
