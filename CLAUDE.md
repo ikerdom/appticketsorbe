@@ -18,6 +18,7 @@ Antes de tocar código, lee siempre estos documentos en este orden:
 | [PLAN_PROPUESTAS.md](./PLAN_PROPUESTAS.md) | Plan módulo Propuestas de Mejora | Cuando trabajes en el módulo de propuestas |
 | [PLAN_BLOQUEADOS.md](./PLAN_BLOQUEADOS.md) | Estado BLOQUEADO + nota obligatoria al resolver | Cuando implementes bloqueos de tickets |
 | [PLAN_EDITOR_RICO.md](./PLAN_EDITOR_RICO.md) | Editor rico con imágenes inline (estilo Jira) — completo (R1-R9) | Referencia si tocas el editor o los adjuntos huérfanos |
+| [PLAN_V2.md](./PLAN_V2.md) | V2: tarjetas compactas · columna QA · conversación tipo correo · login · bug punycode | Roadmap general de la siguiente versión |
 | [README.md](./README.md) | Setup inicial, deploy, comandos | Para arrancar el proyecto |
 
 ---
