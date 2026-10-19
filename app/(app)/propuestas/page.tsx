@@ -11,9 +11,9 @@ export default async function PropuestasPage() {
   const user = await requireCurrentPageUser();
 
   const propuestas = await prisma.propuesta.findMany({
-    where: { userId: user.id },
     include: {
-      empresa: { select: { id: true, nombre: true, color: true } }
+      empresa: { select: { id: true, nombre: true, color: true } },
+      user: { select: { id: true, nombre: true, name: true, email: true } }
     },
     orderBy: { createdAt: "desc" }
   });
@@ -24,12 +24,13 @@ export default async function PropuestasPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Propuestas de mejora</h1>
-        <p className="text-sm text-slate-500">Tus ideas y sugerencias para mejorar la plataforma</p>
+        <p className="text-sm text-slate-500">Ideas y sugerencias del equipo para mejorar la plataforma</p>
       </div>
       <PropuestasList
         initialPropuestas={propuestas}
         defaultAutorNombre={autorNombre}
         defaultAutorEmail={user.email ?? ""}
+        currentUserId={user.id}
       />
     </div>
   );

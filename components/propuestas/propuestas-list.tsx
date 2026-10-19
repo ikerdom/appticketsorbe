@@ -20,6 +20,7 @@ interface Propuesta {
   notaAdmin: string | null;
   createdAt: Date | string;
   empresa: { id: string; nombre: string; color: string | null } | null;
+  user?: { id: string; nombre: string | null; name: string | null; email: string } | null;
 }
 
 const ESTADO_CONFIG: Record<PropuestaEstado, { label: string; icon: React.ReactNode; color: string; border: string; hint: string }> = {
@@ -33,9 +34,10 @@ interface PropuestasListProps {
   initialPropuestas: Propuesta[];
   defaultAutorNombre: string;
   defaultAutorEmail: string;
+  currentUserId?: string;
 }
 
-export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultAutorEmail }: PropuestasListProps) {
+export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultAutorEmail, currentUserId }: PropuestasListProps) {
   const [propuestas, setPropuestas] = useState<Propuesta[]>(initialPropuestas);
   const [showForm, setShowForm] = useState(false);
   const [retirarId, setRetirarId] = useState<string | null>(null);
@@ -114,13 +116,19 @@ export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultA
         <div className="space-y-3">
           {propuestas.map(p => {
             const cfg = ESTADO_CONFIG[p.estado];
+            const autorName = p.user?.nombre || p.user?.name || p.autorNombre || p.autorEmail || "—";
+            const esPropia = currentUserId ? (p.user?.id === currentUserId) : true;
             return (
               <div key={p.id} className={`rounded-xl border border-l-4 ${cfg.border} bg-white p-4 shadow-sm hover:shadow-md transition-shadow`}>
-                <div className="mb-2.5 flex items-center justify-between gap-2">
+                <div className="mb-2.5 flex items-center justify-between gap-2 flex-wrap">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ${cfg.color}`}>
                     {cfg.icon}{cfg.label}
                   </span>
-                  <span className="text-[11px] text-slate-400">{formatDateTimeEs(p.createdAt)}</span>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-[11px] font-medium text-slate-500">{autorName}</span>
+                    <span className="text-[11px] text-slate-300">·</span>
+                    <span className="text-[11px] text-slate-400">{formatDateTimeEs(p.createdAt)}</span>
+                  </div>
                 </div>
                 <p className="mb-1.5 text-sm font-semibold leading-snug text-slate-800">{p.titulo}</p>
                 <p className="mb-3 text-xs leading-relaxed text-slate-500 whitespace-pre-line">{p.descripcion}</p>
@@ -131,7 +139,7 @@ export function PropuestasList({ initialPropuestas, defaultAutorNombre, defaultA
                 ) : cfg.hint ? (
                   <p className="text-[11px] italic text-slate-400">{cfg.hint}</p>
                 ) : null}
-                {p.estado === "PENDIENTE" && (
+                {esPropia && p.estado === "PENDIENTE" && (
                   <button
                     type="button"
                     onClick={() => setRetirarId(p.id)}

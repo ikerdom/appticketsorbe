@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle, AlertTriangle, ArrowRight, CheckCircle2,
-  ChevronDown, ChevronRight, ChevronUp, Clock, Lock, MessageSquare, Plus
+  ChevronDown, ChevronRight, ChevronUp, Clock, Lightbulb, Lock, MessageSquare, Plus
 } from "lucide-react";
 import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
 import { Dialog } from "@/components/ui/dialog";
@@ -205,13 +205,23 @@ export function UserPortal({ tickets }: UserPortalProps) {
           Mis incidencias
           {activos > 0 && <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500">{activos} activas</span>}
         </h2>
-        <Link
-          href="/tickets/nuevo"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/propuestas"
+            className="inline-flex items-center gap-1.5 rounded-xl border bg-amber-50 border-amber-200 px-3 py-2 text-sm font-semibold text-amber-700 hover:bg-amber-100 transition"
+            title="Ver e ideas del equipo"
+          >
+            <Lightbulb className="h-4 w-4" />
+            Propuestas
+          </Link>
+          <Link
+            href="/tickets/nuevo"
+            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva
+          </Link>
+        </div>
       </div>
 
       {/* ── Columnas de tickets ──────────────────────────────────── */}
