@@ -133,8 +133,16 @@ export function SortableTicketCard({
         </p>
       </Link>
 
-      {/* Persona */}
-      <p className="mb-2 truncate text-[11px] text-slate-500">{persona}</p>
+      {/* Empresa + Persona */}
+      <div className="mb-2 flex items-center justify-between gap-1">
+        <p className="truncate text-[11px] text-slate-500">{persona}</p>
+        <span
+          className="shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white/90"
+          style={{ backgroundColor: companyColor }}
+        >
+          {ticket.empresaDestino.nombre.slice(0, 8)}
+        </span>
+      </div>
 
       {/* Banner BLOQUEADO */}
       {ticket.estado === "BLOQUEADO" && ticket.motivoBloqueo && (
@@ -181,9 +189,9 @@ export function SortableTicketCard({
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onTake(ticket.id); }}
-          className="mt-2 w-full rounded-lg bg-amber-500 px-2 py-1 text-[11px] font-bold text-white transition hover:bg-amber-600 active:scale-95"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-[11px] font-bold text-amber-700 transition hover:bg-amber-500 hover:text-white hover:border-amber-500 active:scale-95"
         >
-          → En curso
+          <span>⚡</span> Coger ticket
         </button>
       ) : null}
 

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, ImagePlus, Link2, Lock, Mail, Pencil, Phone, Save, Share2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Building2, Calendar, Check, CheckCircle2, Clock, ImagePlus, Link2, Lock, Mail, Pencil, Phone, Save, Share2, Tag, User, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogActions } from "@/components/ui/dialog";
 import dynamic from "next/dynamic";
 import { RichContent } from "@/components/ui/rich-content";
-import { PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
+import { CATEGORIA_LABELS, ESTADO_COLOR, ESTADO_LABELS, PRIORIDAD_COLOR, PRIORIDAD_LABELS } from "@/lib/constants";
 import { formatDateTimeEs } from "@/lib/dates";
 import { decodeEmailForDisplay } from "@/lib/format";
 import { extractReferencedAdjuntoIds, isRichContentEmpty, stripHtml } from "@/lib/rich-content";
@@ -411,8 +411,8 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Badge className="border bg-blue-100 text-blue-700">{currentEstado.replace("_", " ")}</Badge>
-        <Badge className={PRIORIDAD_COLOR[ticket.prioridad]}>{PRIORIDAD_LABELS[ticket.prioridad]}</Badge>
+        <Badge className={`border ${ESTADO_COLOR[currentEstado]}`}>{ESTADO_LABELS[currentEstado]}</Badge>
+        <Badge className={`border ${PRIORIDAD_COLOR[ticket.prioridad]}`}>{PRIORIDAD_LABELS[ticket.prioridad]}</Badge>
         {destinos.map((destino) => (
           <Badge key={destino.id} className="border-transparent text-white" style={{ backgroundColor: destino.empresa.color || "#64748b" }}>
             {destino.empresa.nombre}
@@ -683,32 +683,46 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   </div>
                 </div>
               ) : (
-                <>
-                  <p><strong>Nombre / recurso:</strong> {ticket.contactoNombre || "-"}</p>
-                  <p><strong>Teléfono:</strong> {ticket.contactoTelefono || "-"}</p>
-                  <p><strong>Email:</strong> {decodeEmailForDisplay(ticket.contactoEmail) || "-"}</p>
-                  <p><strong>URL / referencia:</strong> {ticket.contactoReferencia || ticket.personaAfectada || "-"}</p>
-                  <p><strong>Notas:</strong> {ticket.contactoNotas || "-"}</p>
+                <div className="space-y-2">
+                  {[
+                    { icon: UserRound, label: "Nombre / recurso", value: ticket.contactoNombre },
+                    { icon: Phone, label: "Teléfono", value: ticket.contactoTelefono },
+                    { icon: Mail, label: "Email", value: decodeEmailForDisplay(ticket.contactoEmail) },
+                    { icon: Link2, label: "URL / referencia", value: ticket.contactoReferencia || ticket.personaAfectada }
+                  ].map(({ icon: Icon, label, value }) => value ? (
+                    <div key={label} className="flex items-start gap-2.5 text-sm">
+                      <Icon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="text-slate-700 break-all">{value}</span>
+                    </div>
+                  ) : null)}
+                  {ticket.contactoNotas && (
+                    <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-xs text-slate-600 leading-relaxed">
+                      {ticket.contactoNotas}
+                    </div>
+                  )}
+                  {!ticket.contactoNombre && !ticket.contactoTelefono && !ticket.contactoEmail && !ticket.contactoReferencia && !ticket.personaAfectada && !ticket.contactoNotas && (
+                    <p className="text-xs text-slate-400 italic">Sin datos de contacto</p>
+                  )}
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {ticket.contactoTelefono ? (
-                      <a href={`tel:${ticket.contactoTelefono}`} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-slate-100">
-                        <Phone className="h-3.5 w-3.5" />
+                    {ticket.contactoTelefono && (
+                      <a href={`tel:${ticket.contactoTelefono}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-2.5 py-1.5 text-xs font-medium hover:bg-slate-50 transition">
+                        <Phone className="h-3.5 w-3.5 text-slate-500" />
                         Llamar
                       </a>
-                    ) : null}
-                    {ticket.contactoEmail ? (
-                      <a href={`mailto:${ticket.contactoEmail}`} className="inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs hover:bg-slate-100">
-                        <Mail className="h-3.5 w-3.5" />
-                        {decodeEmailForDisplay(ticket.contactoEmail)}
+                    )}
+                    {ticket.contactoEmail && (
+                      <a href={`mailto:${ticket.contactoEmail}`} className="inline-flex items-center gap-1.5 rounded-lg border bg-white px-2.5 py-1.5 text-xs font-medium hover:bg-slate-50 transition">
+                        <Mail className="h-3.5 w-3.5 text-slate-500" />
+                        Escribir email
                       </a>
-                    ) : null}
+                    )}
                     {isAdmin && (
                       <Button size="sm" variant="outline" onClick={() => setEditingContact(true)}>
-                        Editar contacto
+                        <Pencil className="mr-1.5 h-3 w-3" />Editar
                       </Button>
                     )}
                   </div>
-                </>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -723,19 +737,47 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           )}
 
           <Card className="rounded-2xl">
-            <CardHeader>
-              <CardTitle>Acciones</CardTitle>
+            <CardHeader className="pb-3">
+              <CardTitle>Detalles y acciones</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-xs text-muted-foreground">Empresa afectada: {destinos.map((d) => d.empresa.nombre).join(", ")}</p>
-              <p className="text-xs text-muted-foreground">Categoría: {ticket.categoriaCustom || ticket.categoria}</p>
-              <p className="text-xs text-muted-foreground">Gestionando: {decodeEmailForDisplay(ticket.asignado?.email) || "Sin coger"}</p>
-              <p className="text-xs text-muted-foreground">Creado: {formatDateTimeEs(ticket.createdAt)}</p>
-              <p className="text-xs text-muted-foreground">Actualizado: {formatDateTimeEs(ticket.updatedAt)}</p>
-              {ticket.resueltoAt ? <p className="text-xs text-muted-foreground">Resuelto: {formatDateTimeEs(ticket.resueltoAt)}</p> : null}
-              {ticket.horasDedicadas != null ? (
-                <p className="text-xs text-muted-foreground">Horas dedicadas: {ticket.horasDedicadas}h</p>
-              ) : null}
+              {/* Metadata con iconos */}
+              <div className="space-y-1.5 rounded-xl bg-slate-50 p-3">
+                {destinos.length > 0 && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <Building2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="text-slate-600">{destinos.map((d) => d.empresa.nombre).join(", ")}</span>
+                  </div>
+                )}
+                <div className="flex items-start gap-2 text-xs">
+                  <Tag className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="text-slate-600">{ticket.categoriaCustom || CATEGORIA_LABELS[ticket.categoria as keyof typeof CATEGORIA_LABELS] || ticket.categoria}</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="text-slate-600">{decodeEmailForDisplay(ticket.asignado?.email) || <em className="text-slate-400">Sin asignar</em>}</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <Calendar className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="text-slate-500">Creado {formatDateTimeEs(ticket.createdAt)}</span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
+                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                  <span className="text-slate-500">Actualizado {formatDateTimeEs(ticket.updatedAt)}</span>
+                </div>
+                {ticket.resueltoAt && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                    <span className="text-emerald-700 font-medium">Resuelto {formatDateTimeEs(ticket.resueltoAt)}</span>
+                  </div>
+                )}
+                {ticket.horasDedicadas != null && (
+                  <div className="flex items-start gap-2 text-xs">
+                    <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="text-slate-600">{ticket.horasDedicadas}h dedicadas</span>
+                  </div>
+                )}
+              </div>
               {ticket.notaResolucion ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-700">

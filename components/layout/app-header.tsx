@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CircleHelp, ChevronDown, Zap } from "lucide-react";
 import { CommandPaletteTrigger } from "@/components/layout/command-palette-trigger";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 interface AppHeaderProps {
   empresaNombre: string;
@@ -68,6 +69,9 @@ export function AppHeader({ empresaNombre, empresaColor, userEmail, userName, is
         <div className="flex items-center gap-1">
           <div className="[&_button]:border-slate-700 [&_button]:bg-slate-900 [&_button]:text-slate-300 [&_button:hover]:bg-slate-800 [&_button:hover]:text-white [&_button:hover]:border-slate-600">
             <CommandPaletteTrigger />
+          </div>
+          <div className="[&_button]:text-slate-300 [&_button:hover]:bg-slate-800 [&_button:hover]:text-white">
+            <NotificationBell />
           </div>
           <Link href="/propuestas" className="hidden rounded-md px-3 py-2 text-sm text-slate-400 hover:bg-slate-800 hover:text-white md:inline-flex">
             Propuestas
