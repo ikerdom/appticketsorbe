@@ -24,35 +24,38 @@ export default async function AdminDashboardPage({
   });
   const empresaMap = new Map(empresas.map((empresa) => [empresa.id, empresa.nombre]));
 
+  // archivadoAt filter kept only for operational queries (sinAsignar).
+  // All analytical / metric queries intentionally include archived tickets
+  // so the dashboard reflects the full historical picture, not just active ones.
   const [estadoGroup, prevEstadoGroup, origenGroup, destinoGroup, topCategoriasEnum, topCategoriasCustom, resueltos, sinAsignar, ticketsTrend, ticketsResueltosTrend, conSolucionCount, prioridadGroup] =
     await Promise.all([
-      prisma.ticket.groupBy({ by: ["estado"], where: { archivadoAt: null, createdAt: { gte: from } }, _count: { estado: true } }),
-      prisma.ticket.groupBy({ by: ["estado"], where: { archivadoAt: null, createdAt: { gte: previousFrom, lt: from } }, _count: { estado: true } }),
+      prisma.ticket.groupBy({ by: ["estado"], where: { createdAt: { gte: from } }, _count: { estado: true } }),
+      prisma.ticket.groupBy({ by: ["estado"], where: { createdAt: { gte: previousFrom, lt: from } }, _count: { estado: true } }),
       prisma.ticket.groupBy({
         by: ["empresaOrigenId"],
-        where: { archivadoAt: null, createdAt: { gte: from } },
+        where: { createdAt: { gte: from } },
         _count: { empresaOrigenId: true }
       }),
       prisma.ticket.findMany({
-        where: { archivadoAt: null, createdAt: { gte: from } },
+        where: { createdAt: { gte: from } },
         select: { destinos: { select: { empresaId: true, empresa: { select: { nombre: true, isGlobalTarget: true } } } } }
       }),
       prisma.ticket.groupBy({
         by: ["categoria"],
-        where: { archivadoAt: null, createdAt: { gte: from } },
+        where: { createdAt: { gte: from } },
         _count: { categoria: true },
         orderBy: { _count: { categoria: "desc" } },
         take: 5
       }),
       prisma.ticket.groupBy({
         by: ["categoriaCustom"],
-        where: { archivadoAt: null, createdAt: { gte: from }, categoriaCustom: { not: null } },
+        where: { createdAt: { gte: from }, categoriaCustom: { not: null } },
         _count: { categoriaCustom: true },
         orderBy: { _count: { categoriaCustom: "desc" } },
         take: 5
       }),
       prisma.ticket.findMany({
-        where: { archivadoAt: null, resueltoAt: { not: null }, createdAt: { gte: from } },
+        where: { resueltoAt: { not: null }, createdAt: { gte: from } },
         include: {
           empresaOrigen: true,
           historial: { select: { accion: true, detalle: true, createdAt: true }, orderBy: { createdAt: "asc" } }
@@ -69,19 +72,19 @@ export default async function AdminDashboardPage({
         orderBy: { createdAt: "asc" }
       }),
       prisma.ticket.findMany({
-        where: { archivadoAt: null, createdAt: { gte: from } },
+        where: { createdAt: { gte: from } },
         select: { createdAt: true }
       }),
       prisma.ticket.findMany({
-        where: { archivadoAt: null, resueltoAt: { gte: from, not: null } },
+        where: { resueltoAt: { gte: from, not: null } },
         select: { resueltoAt: true }
       }),
       prisma.ticket.count({
-        where: { archivadoAt: null, estado: "RESUELTO", notaResolucion: { not: null } }
+        where: { OR: [{ estado: "RESUELTO" }, { archivadoAt: { not: null } }], notaResolucion: { not: null } }
       }),
       prisma.ticket.groupBy({
         by: ["prioridad"],
-        where: { archivadoAt: null, createdAt: { gte: from } },
+        where: { createdAt: { gte: from } },
         _count: { prioridad: true }
       })
     ]);

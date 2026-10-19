@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertCircle, AlertTriangle, ArrowRight, CheckCircle2,
-  ChevronDown, ChevronRight, ChevronUp, Clock, Lightbulb, Lock, MessageSquare, Plus
+  ChevronRight, Clock, Lightbulb, Lock, MessageSquare, Plus
 } from "lucide-react";
 import { formatDateTimeEs, formatRelativeEs } from "@/lib/dates";
 import { Dialog } from "@/components/ui/dialog";
@@ -117,14 +117,17 @@ const PRIORIDAD_LABEL: Record<Prioridad, string> = {
   CRITICA: "Crítica", ALTA: "Alta", MEDIA: "Media", BAJA: "Baja"
 };
 
-export function UserPortal({ tickets }: UserPortalProps) {
-  const [showResueltos, setShowResueltos] = useState(false);
+const DOS_DIAS_MS = 2 * 24 * 60 * 60 * 1000;
 
+export function UserPortal({ tickets }: UserPortalProps) {
   const abiertos   = tickets.filter(t => t.estado === "ABIERTO");
   const enCurso    = tickets.filter(t => t.estado === "EN_CURSO");
   const qaTickets  = tickets.filter(t => t.estado === "QA");
   const bloqueados = tickets.filter(t => t.estado === "BLOQUEADO");
-  const resueltos  = tickets.filter(t => t.estado === "RESUELTO");
+  // Solo los resueltos de los últimos 2 días — el resto ya está en Histórico
+  const resueltos  = tickets.filter(
+    t => t.estado === "RESUELTO" && (Date.now() - new Date(t.updatedAt).getTime()) < DOS_DIAS_MS
+  );
   const sinLeer    = tickets.filter(t => t.unread).length;
   const activos    = abiertos.length + enCurso.length + qaTickets.length + bloqueados.length;
 
@@ -243,31 +246,16 @@ export function UserPortal({ tickets }: UserPortalProps) {
         <>
           {/* Desktop: 5 cols */}
           <div className="hidden gap-3 md:grid md:grid-cols-5">
-            <KanbanCol estado="ABIERTO"  tickets={abiertos} />
-            <KanbanCol estado="EN_CURSO" tickets={enCurso} />
-            <KanbanCol estado="QA"       tickets={qaTickets} />
+            <KanbanCol estado="ABIERTO"   tickets={abiertos} />
+            <KanbanCol estado="EN_CURSO"  tickets={enCurso} />
+            <KanbanCol estado="QA"        tickets={qaTickets} />
             <KanbanCol estado="BLOQUEADO" tickets={bloqueados} />
-            {/* Resueltos colapsables */}
             <div className="space-y-2">
-              <ColHeader estado="RESUELTO" count={resueltos.length} />
-              {resueltos.length > 0 ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setShowResueltos(v => !v)}
-                    className="flex w-full items-center justify-between rounded-xl border bg-white px-3 py-2 text-xs font-medium text-slate-500 hover:bg-slate-50 transition"
-                  >
-                    <span>{showResueltos ? "Ocultar resueltos" : `Ver ${resueltos.length} resueltos`}</span>
-                    {showResueltos ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                  </button>
-                  {showResueltos && (
-                    <div className="space-y-1.5">
-                      {resueltos.map(t => <TicketCard key={t.id} ticket={t} />)}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="rounded-xl border border-dashed p-6 text-center text-xs text-slate-400 bg-emerald-50/30">Sin resueltos</div>
+              <KanbanCol estado="RESUELTO" tickets={resueltos} />
+              {resueltos.length === 0 && (
+                <p className="px-2 text-center text-[11px] text-slate-400">
+                  Los resueltos recientes aparecen aquí 2 días.
+                </p>
               )}
             </div>
           </div>
