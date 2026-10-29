@@ -754,6 +754,13 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   <span className="text-slate-600">{ticket.categoriaCustom || CATEGORIA_LABELS[ticket.categoria as keyof typeof CATEGORIA_LABELS] || ticket.categoria}</span>
                 </div>
                 <div className="flex items-start gap-2 text-xs">
+                  <UserRound className="mt-0.5 h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                  <span className="text-slate-400 shrink-0">Reportado por</span>
+                  <span className="text-slate-700 font-semibold">
+                    {ticket.creador?.nombre || ticket.creador?.name || decodeEmailForDisplay(ticket.creador?.email) || "—"}
+                  </span>
+                </div>
+                <div className="flex items-start gap-2 text-xs">
                   <User className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" />
                   <span className="text-slate-600">{decodeEmailForDisplay(ticket.asignado?.email) || <em className="text-slate-400">Sin asignar</em>}</span>
                 </div>
