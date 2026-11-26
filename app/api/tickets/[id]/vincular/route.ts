@@ -14,8 +14,8 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (!parentNumero || isNaN(parentNumero)) return NextResponse.json({ error: "Número de ticket inválido" }, { status: 400 });
 
     const [hijo, padre] = await Promise.all([
-      prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true, numero: true, parentId: true } }),
-      prisma.ticket.findUnique({ where: { numero: parentNumero }, select: { id: true, numero: true, parentId: true } })
+      prisma.ticket.findUnique({ where: { id: params.id }, select: { id: true, numero: true, parentId: true, estado: true } }),
+      prisma.ticket.findUnique({ where: { numero: parentNumero }, select: { id: true, numero: true, parentId: true, estado: true } })
     ]);
 
     if (!hijo) return NextResponse.json({ error: "Ticket no encontrado" }, { status: 404 });
@@ -23,9 +23,10 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     if (padre.id === hijo.id) return NextResponse.json({ error: "Un ticket no puede vincularse a sí mismo" }, { status: 400 });
     if (padre.parentId) return NextResponse.json({ error: "El ticket padre ya tiene un padre — solo se permiten 2 niveles" }, { status: 400 });
 
+    // Al vincular, el hijo hereda el estado del padre para coherencia
     const updated = await prisma.ticket.update({
       where: { id: hijo.id },
-      data: { parentId: padre.id }
+      data: { parentId: padre.id, estado: padre.estado }
     });
 
     await logTicketAction({ ticketId: hijo.id, autorId: user.id, accion: "vinculado", detalle: { parentNumero, parentId: padre.id } });
