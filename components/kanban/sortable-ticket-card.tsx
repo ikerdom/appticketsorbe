@@ -111,6 +111,11 @@ export function SortableTicketCard({
           <span className="font-mono text-[10px] font-bold text-slate-400">
             #{String(ticket.numero).padStart(4, "0")}
           </span>
+          {ticket._count.hijos > 0 && (
+            <span className="inline-flex items-center gap-0.5 rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600" title={`${ticket._count.hijos} ticket${ticket._count.hijos > 1 ? "s" : ""} vinculado${ticket._count.hijos > 1 ? "s" : ""}`}>
+              <Link2 className="h-2.5 w-2.5" />{ticket._count.hijos}
+            </span>
+          )}
           <span className="text-[10px] text-slate-400">{formatRelativeEs(ticket.createdAt)}</span>
           {sla && (
             <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ring-1 ${sla.color} ${sla.ring} ${sla.pulse ? "animate-pulse" : ""}`}>

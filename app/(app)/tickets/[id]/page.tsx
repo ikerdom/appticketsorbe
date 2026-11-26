@@ -61,7 +61,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
         select: { id: true, numero: true, titulo: true, estado: true, empresaOrigenId: true, empresaOrigen: { select: { nombre: true } } }
       },
       hijos: {
-        select: { id: true, numero: true, titulo: true, estado: true, empresaOrigenId: true, empresaOrigen: { select: { nombre: true } } },
+        select: {
+          id: true, numero: true, titulo: true, estado: true, empresaOrigenId: true,
+          descripcion: true, createdAt: true,
+          contactoNombre: true, contactoTelefono: true, contactoEmail: true,
+          empresaOrigen: { select: { nombre: true } },
+          creador: { select: { id: true, nombre: true, name: true, email: true } }
+        },
         orderBy: { numero: "asc" }
       }
     }
@@ -69,6 +75,8 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
 
   if (!ticket) notFound();
   if (!puedeVerTicket(user, ticket)) redirect("/forbidden");
+  // Ticket hijo → redirigir al padre para ver vista unificada
+  if (ticket.parentId) redirect(`/tickets/${ticket.parentId}`);
 
   await markTicketRead(ticket.id, user.id);
 

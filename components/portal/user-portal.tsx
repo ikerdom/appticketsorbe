@@ -21,6 +21,7 @@ interface PortalTicket {
   updatedAt: Date | string;
   unread: boolean;
   motivoBloqueo?: string | null;
+  parentId?: string | null;
   empresaOrigen: { nombre: string; color: string | null };
   creador: { nombre: string | null; name: string | null; email: string };
   _count: { comentarios: number };
@@ -336,6 +337,11 @@ function TicketCard({ ticket }: { ticket: PortalTicket }) {
           <ChevronRight className="h-3.5 w-3.5 text-slate-300 group-hover:text-indigo-400 transition" />
         </div>
       </div>
+      {ticket.parentId && (
+        <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-semibold text-indigo-600">
+          🔗 Agrupada con otro reporte — ver incidencia conjunta
+        </div>
+      )}
       <p className={`line-clamp-2 text-sm font-semibold leading-snug ${ticket.unread ? "text-slate-900" : "text-slate-700"}`}>
         {ticket.titulo}
       </p>

@@ -8,12 +8,20 @@ export type TicketCardData = Ticket & {
   destinos: DestinoWithEmpresa[];
   creador: Pick<User, "id" | "email" | "nombre" | "name">;
   asignado: Pick<User, "id" | "email" | "nombre" | "name" | "image"> | null;
-  _count: { comentarios: number };
+  _count: { comentarios: number; hijos: number };
+  parentId: string | null;
   unread?: boolean;
 };
 
-type TicketVinculadoResumen = Pick<Ticket, "id" | "numero" | "titulo" | "estado" | "empresaOrigenId"> & {
+// Resumen ligero para el campo `parent` (referencia al padre)
+type TicketParentResumen = Pick<Ticket, "id" | "numero" | "titulo" | "estado" | "empresaOrigenId"> & {
   empresaOrigen: Pick<Empresa, "nombre">;
+};
+
+// Resumen completo para los `hijos` (vista unificada con descripción)
+type TicketVinculadoResumen = Pick<Ticket, "id" | "numero" | "titulo" | "estado" | "empresaOrigenId" | "descripcion" | "createdAt" | "contactoNombre" | "contactoTelefono" | "contactoEmail"> & {
+  empresaOrigen: Pick<Empresa, "nombre">;
+  creador: Pick<User, "id" | "nombre" | "name" | "email">;
 };
 
 export type TicketDetailData = Ticket & {
@@ -37,6 +45,6 @@ export type TicketDetailData = Ticket & {
   notas: (NotaTicket & {
     autor: Pick<User, "id" | "email" | "nombre" | "name">;
   })[];
-  parent: TicketVinculadoResumen | null;
+  parent: TicketParentResumen | null;
   hijos: TicketVinculadoResumen[];
 };

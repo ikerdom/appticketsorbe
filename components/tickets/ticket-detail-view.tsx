@@ -593,6 +593,57 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
             </CardContent>
           </Card>
 
+          {/* Reportes vinculados — descripciones de los tickets hijos en vista unificada */}
+          {localHijos.length > 0 && (
+            <Card className="rounded-2xl border-indigo-100 bg-indigo-50/20">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <GitMerge className="h-4 w-4 text-indigo-500" />
+                  Incidencia agrupada · {localHijos.length + 1} reportes del mismo problema
+                </CardTitle>
+                <p className="text-xs text-slate-500 mt-1">Los siguientes tickets fueron reportados por otros usuarios y pertenecen a esta misma incidencia.</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Resumen del ticket padre (este) */}
+                <div className="rounded-xl border border-indigo-100 bg-white p-3">
+                  <div className="mb-2 flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold text-indigo-700">#{String(ticket.numero).padStart(4, "0")} (este ticket)</span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-xs text-slate-500">{ticket.empresaOrigen.nombre}</span>
+                    <span className="text-xs text-slate-400">·</span>
+                    <span className="text-xs text-slate-500">{ticket.creador?.nombre || ticket.creador?.name || ticket.creador?.email}</span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 mb-1">{ticket.titulo}</p>
+                </div>
+                {/* Descripciones de los hijos */}
+                {localHijos.map((hijo) => (
+                  <div key={hijo.id} className="rounded-xl border border-indigo-100 bg-white p-3">
+                    <div className="mb-2 flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs font-bold text-indigo-600">#{String(hijo.numero).padStart(4, "0")}</span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs text-slate-500">{hijo.empresaOrigen.nombre}</span>
+                      <span className="text-xs text-slate-400">·</span>
+                      <span className="text-xs text-slate-500">{hijo.creador?.nombre || hijo.creador?.name || hijo.creador?.email}</span>
+                      {hijo.contactoNombre && (
+                        <>
+                          <span className="text-xs text-slate-400">·</span>
+                          <span className="text-xs text-slate-500">{hijo.contactoNombre}</span>
+                        </>
+                      )}
+                      <Badge className={`ml-auto shrink-0 border text-[10px] ${ESTADO_COLOR[hijo.estado as keyof typeof ESTADO_COLOR]}`}>
+                        {ESTADO_LABELS[hijo.estado as keyof typeof ESTADO_LABELS]}
+                      </Badge>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-700 mb-2">{hijo.titulo}</p>
+                    <div className="text-xs text-slate-600 prose-xs max-w-none">
+                      <RichContent html={hijo.descripcion} compact />
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-2">

@@ -30,7 +30,7 @@ export default async function DashboardPage() {
         destinos: { include: { empresa: true } },
         creador: { select: { id: true, email: true, nombre: true, name: true } },
         asignado: { select: { id: true, email: true, nombre: true, name: true, image: true } },
-        _count: { select: { comentarios: true } }
+        _count: { select: { comentarios: true, hijos: true } }
       },
       orderBy: { updatedAt: "desc" }
     }),

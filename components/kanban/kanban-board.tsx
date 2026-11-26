@@ -159,7 +159,7 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
 
   const historicoIds = useMemo(() => new Set(historicoResueltas.map((t) => t.id)), [historicoResueltas]);
 
-  // Client-side filtered tickets (empresa, prioridad, categoria + hide historico)
+  // Client-side filtered tickets (empresa, prioridad, categoria + hide historico + hide hijos)
   const visibleTickets = useMemo(() => {
     const cutoff = Date.now() - HISTORICO_DIAS * 24 * 60 * 60 * 1000;
     return tickets.filter((t) => {
@@ -167,6 +167,8 @@ export function KanbanBoard({ initialTickets, empresas, isAdmin, currentUserId, 
       if (t.estado === "RESUELTO" && new Date(t.resueltoAt ?? t.updatedAt).getTime() < cutoff) {
         return false;
       }
+      // Hide child (linked) tickets — they appear inside the parent's detail view
+      if (t.parentId) return false;
       // Empresa filter — solo por empresa afectada (destino), no por quien creó el ticket
       if (filters.empresaId) {
         const match =
