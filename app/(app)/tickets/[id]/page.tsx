@@ -74,9 +74,18 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
   });
 
   if (!ticket) notFound();
-  if (!puedeVerTicket(user, ticket)) redirect("/forbidden");
+
   // Ticket hijo → redirigir al padre para ver vista unificada
   if (ticket.parentId) redirect(`/tickets/${ticket.parentId}`);
+
+  if (!puedeVerTicket(user, ticket)) {
+    // Permitir si el usuario es creador de un ticket hijo vinculado a este padre
+    const tieneHijo = await prisma.ticket.findFirst({
+      where: { parentId: ticket.id, creadorId: user.id },
+      select: { id: true }
+    });
+    if (!tieneHijo) redirect("/forbidden");
+  }
 
   await markTicketRead(ticket.id, user.id);
 
