@@ -56,6 +56,13 @@ export default async function TicketDetailPage({ params }: { params: { id: strin
           autor: { select: { id: true, email: true, nombre: true, name: true } }
         },
         orderBy: { createdAt: "asc" }
+      },
+      parent: {
+        select: { id: true, numero: true, titulo: true, estado: true, empresaOrigenId: true, empresaOrigen: { select: { nombre: true } } }
+      },
+      hijos: {
+        select: { id: true, numero: true, titulo: true, estado: true, empresaOrigenId: true, empresaOrigen: { select: { nombre: true } } },
+        orderBy: { numero: "asc" }
       }
     }
   });

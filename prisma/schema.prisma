@@ -103,10 +103,14 @@ model Ticket {
   updatedAt         DateTime @updatedAt
   resueltoAt        DateTime?
   notas             NotaTicket[]
+  parentId          String?
+  parent            Ticket?  @relation("TicketVinculados", fields: [parentId], references: [id])
+  hijos             Ticket[] @relation("TicketVinculados")
 
   @@index([empresaOrigenId])
   @@index([empresaDestinoId])
   @@index([estado])
+  @@index([parentId])
 }
 
 model TicketEmpresaDestino {

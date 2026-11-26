@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Building2, Calendar, Check, CheckCircle2, Clock, ImagePlus, Link2, Lock, Mail, Pencil, Phone, Save, Share2, Tag, User, UserRound, X } from "lucide-react";
+import { ArrowLeft, Building2, Calendar, Check, CheckCircle2, Clock, GitMerge, ImagePlus, Link2, Lock, Mail, Pencil, Phone, Save, Share2, Tag, User, UserRound, X } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -88,6 +88,10 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareRef = useRef<HTMLDivElement>(null);
+  const [localParent, setLocalParent] = useState(ticket.parent ?? null);
+  const [localHijos, setLocalHijos] = useState(ticket.hijos ?? []);
+  const [vincularNum, setVincularNum] = useState("");
+  const [vincularLoading, setVincularLoading] = useState(false);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -170,6 +174,35 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
     const { ticket: updated } = await response.json();
     setCurrentEstado(updated.estado);
     toast.success("Ticket actualizado");
+    router.refresh();
+  }
+
+  async function vincularParent() {
+    if (!vincularNum.trim()) return;
+    setVincularLoading(true);
+    const res = await fetch(`/api/tickets/${ticket.id}/vincular`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentNumero: parseInt(vincularNum, 10) })
+    });
+    setVincularLoading(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({ error: "Error" }));
+      toast.error(body.error ?? "Error al vincular");
+      return;
+    }
+    toast.success("Ticket vinculado");
+    setVincularNum("");
+    router.refresh();
+  }
+
+  async function desvincularParent() {
+    setVincularLoading(true);
+    const res = await fetch(`/api/tickets/${ticket.id}/vincular`, { method: "DELETE" });
+    setVincularLoading(false);
+    if (!res.ok) { toast.error("Error al desvincular"); return; }
+    setLocalParent(null);
+    toast.success("Desvinculado");
     router.refresh();
   }
 
@@ -419,6 +452,22 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
           </Badge>
         ))}
       </div>
+
+      {/* Banner ticket padre */}
+      {localParent && (
+        <div className="flex items-center gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-2.5">
+          <GitMerge className="h-4 w-4 shrink-0 text-indigo-500" />
+          <span className="min-w-0 flex-1 text-sm text-indigo-700">
+            Vinculado a{" "}
+            <Link href={`/tickets/${localParent.id}`} className="font-semibold hover:underline">
+              #{String(localParent.numero).padStart(4, "0")} · {localParent.titulo}
+            </Link>
+          </span>
+          <Badge className={`shrink-0 border ${ESTADO_COLOR[localParent.estado as keyof typeof ESTADO_COLOR]}`}>
+            {ESTADO_LABELS[localParent.estado as keyof typeof ESTADO_LABELS]}
+          </Badge>
+        </div>
+      )}
 
       {/* Lifecycle timeline */}
       <Card className="rounded-2xl">
@@ -785,6 +834,53 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
                   </div>
                 )}
               </div>
+
+              {/* Admin: vincular / desvincular ticket padre */}
+              {isAdmin && (
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 space-y-2">
+                  <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-indigo-700">
+                    <GitMerge className="h-3.5 w-3.5" /> Ticket vinculado
+                  </p>
+                  {localParent ? (
+                    <div className="space-y-1.5">
+                      <p className="text-xs text-indigo-700">
+                        →{" "}
+                        <Link href={`/tickets/${localParent.id}`} className="font-semibold hover:underline">
+                          #{String(localParent.numero).padStart(4, "0")} {localParent.titulo}
+                        </Link>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={desvincularParent}
+                        disabled={vincularLoading}
+                        className="text-[11px] font-semibold text-red-500 hover:text-red-700 transition disabled:opacity-40"
+                      >
+                        Desvincular
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-1.5">
+                      <Input
+                        placeholder="Nº ticket padre"
+                        type="number"
+                        value={vincularNum}
+                        onChange={(e) => setVincularNum(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && vincularParent()}
+                        className="h-8 text-xs bg-white"
+                      />
+                      <Button
+                        size="sm"
+                        className="h-8 shrink-0 bg-indigo-600 hover:bg-indigo-700 text-xs px-3"
+                        onClick={vincularParent}
+                        disabled={vincularLoading || !vincularNum.trim()}
+                      >
+                        Vincular
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {ticket.notaResolucion ? (
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3">
                   <p className="mb-1.5 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-emerald-700">
@@ -900,6 +996,36 @@ export function TicketDetailView({ ticket, isAdmin, currentUserId }: TicketDetai
               </Link>
             </CardContent>
           </Card>
+
+          {/* Tickets hijos vinculados */}
+          {localHijos.length > 0 && (
+            <Card className="rounded-2xl border-indigo-100">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-sm">
+                  <GitMerge className="h-4 w-4 text-indigo-500" />
+                  {localHijos.length} ticket{localHijos.length !== 1 ? "s" : ""} vinculado{localHijos.length !== 1 ? "s" : ""}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {localHijos.map((hijo) => (
+                  <Link
+                    key={hijo.id}
+                    href={`/tickets/${hijo.id}`}
+                    className="flex items-start justify-between gap-2 rounded-xl border border-indigo-100 bg-white p-3 hover:bg-indigo-50 transition"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-indigo-700">#{String(hijo.numero).padStart(4, "0")}</p>
+                      <p className="mt-0.5 truncate text-xs text-slate-600">{hijo.titulo}</p>
+                      <p className="text-[10px] text-slate-400">{hijo.empresaOrigen.nombre}</p>
+                    </div>
+                    <Badge className={`shrink-0 border text-[10px] ${ESTADO_COLOR[hijo.estado as keyof typeof ESTADO_COLOR]}`}>
+                      {ESTADO_LABELS[hijo.estado as keyof typeof ESTADO_LABELS]}
+                    </Badge>
+                  </Link>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Notas internas — solo admins */}
           {isAdmin && (

@@ -12,6 +12,10 @@ export type TicketCardData = Ticket & {
   unread?: boolean;
 };
 
+type TicketVinculadoResumen = Pick<Ticket, "id" | "numero" | "titulo" | "estado" | "empresaOrigenId"> & {
+  empresaOrigen: Pick<Empresa, "nombre">;
+};
+
 export type TicketDetailData = Ticket & {
   empresaOrigen: Empresa;
   empresaDestino: Empresa;
@@ -33,4 +37,6 @@ export type TicketDetailData = Ticket & {
   notas: (NotaTicket & {
     autor: Pick<User, "id" | "email" | "nombre" | "name">;
   })[];
+  parent: TicketVinculadoResumen | null;
+  hijos: TicketVinculadoResumen[];
 };
